@@ -2,7 +2,6 @@ package modbusone
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/goburrow/serial"
 )
