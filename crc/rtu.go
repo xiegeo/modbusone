@@ -1,5 +1,6 @@
 package crc
 
+//Validate return true if byte slice ends with valid crc
 func Validate(bs []byte) bool {
 	if len(bs) <= 2 {
 		return false
