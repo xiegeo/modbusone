@@ -39,20 +39,20 @@ const (
 )
 
 //Modbus Protocol Data Unit
-type ADU []byte
+type PDU []byte
 
-//Validate tests for errors in a received ADU packet.
+//Validate tests for errors in a received PDU packet.
 //Returns EcOK if packet is valid,
 //only use the Get functions after Validate passes
-func (a ADU) Validate() ExceptionCode {
-	la := len(a)
-	if la < 0 || !a.GetFunctionCode().Valid() {
+func (p PDU) Validate() ExceptionCode {
+	la := len(p)
+	if la < 0 || !p.GetFunctionCode().Valid() {
 		return EcIllegalFunction
 	}
 	//todo: check for errors 2 and 3
 	return EcOK
 }
 
-func (a ADU) GetFunctionCode() FunctionCode {
-	return FunctionCode(a[0])
+func (p PDU) GetFunctionCode() FunctionCode {
+	return FunctionCode(p[0])
 }
