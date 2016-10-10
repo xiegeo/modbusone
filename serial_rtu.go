@@ -10,8 +10,8 @@ import (
 //Modbus RTU Application Data Unit
 type RTU []byte
 
-func MakeRTU(p PDU) RTU {
-	return RTU(crc.Append(p))
+func MakeRTU(slaveId byte, p PDU) RTU {
+	return RTU(crc.Append(append([]byte{slaveId}, p...)))
 }
 
 func (r RTU) IsMulticast() bool {

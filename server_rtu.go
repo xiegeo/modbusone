@@ -26,7 +26,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	var ioerr error //make continue do io error checking
 	wp := func(pdu PDU) {
 		time.Sleep(delay)
-		_, ioerr = s.com.Write(MakeRTU(pdu))
+		_, ioerr = s.com.Write(MakeRTU(s.SlaveId, pdu))
 	}
 	wec := func(ec ExceptionCode) {
 		wp(ErrorReplyPacket(p, ec))
