@@ -31,6 +31,13 @@ func (s *SerialPort) Open(c serial.Config) (err error) {
 	return
 }
 
+func (s *SerialPort) Read(b []byte) (int, error) {
+	return s.port.Read(b)
+}
+func (s *SerialPort) Write(b []byte) (int, error) {
+	return s.port.Write(b)
+}
+
 func (s *SerialPort) Close() (err error) {
 	if !s.isConnected {
 		return fmt.Errorf("already closed")

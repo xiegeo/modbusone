@@ -6,10 +6,6 @@ import (
 	"github.com/xiegeo/modbusone/crc"
 )
 
-type RTUServer struct {
-	SlaveId byte
-}
-
 //Modbus RTU Application Data Unit
 type RTU []byte
 
@@ -20,5 +16,10 @@ func (r RTU) GetPDU() (PDU, error) {
 	if !crc.Validate(r) {
 		return nil, fmt.Errorf("RTU data crc not valid")
 	}
-	return PDU(r[1 : len(r)-2]), nil
+	p := PDU(r[1 : len(r)-2])
+	return p, nil
+}
+
+func MakeRTU(p PDU) RTU {
+	return RTU(crc.Append(p))
 }
