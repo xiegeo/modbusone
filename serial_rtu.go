@@ -25,17 +25,29 @@ func (r RTU) GetPDU() (PDU, error) {
 	if !crc.Validate(r) {
 		return nil, fmt.Errorf("RTU data crc not valid")
 	}
-	p := PDU(r[1 : len(r)-2])
+	p := r.fastGetPDU()
 	return p, nil
 }
 
-//the minum Delay of 3.5 chars between packets
-func RTUMinDelay(s SerialPort) time.Duration {
+func (r RTU) fastGetPDU() PDU {
+	return PDU(r[1 : len(r)-2])
+}
+
+//RTUMinDelay returns the minum Delay of 3.5 chars between packets or 1750 mircos
+func RTUMinDelay(baudRate int) time.Duration {
 	delay := 1750 * time.Microsecond
-	br := time.Duration(s.BaudRate)
+	br := time.Duration(baudRate)
 	if br <= 19200 {
-		oneBitDuration := (time.Second + br - 1) / br //time it takes to send a bit
-		delay = (oneBitDuration*11*7 + 1) / 2         //time it takes to send 3.5 chars (a char of 8 bits takes 11 bits on wire)
+		//time it takes to send 3.5 or 7/2 chars (a char of 8 bits takes 11 bits on wire)
+		delay = (time.Second*11*7 + (br * 2) - 1) / (br * 2)
 	}
 	return delay
+}
+
+//RTUMinDelay returns the time it takes to send chars in baudRate
+func RTUBytesDelay(chars, baudRate int) time.Duration {
+	br := time.Duration(baudRate)
+	cs := time.Duration(chars)
+
+	return (time.Second*11*cs + br - 1) / br
 }

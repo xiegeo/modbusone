@@ -18,7 +18,7 @@ const MaxRTUSize = 256
 //Serve runs the server and only returns after unrecoverable error, such as com is closed.
 //Right now Read is assumed to only read full packets, as per RTU delay based spec.
 func (s *RTUServer) Serve(handler ProtocalHandler) error {
-	delay := RTUMinDelay(s.com)
+	delay := RTUMinDelay(s.com.BaudRate)
 
 	rb := make([]byte, MaxRTUSize)
 	var p PDU

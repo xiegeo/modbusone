@@ -75,8 +75,10 @@ func (f FunctionCode) WithError() (bool, FunctionCode) {
 type ExceptionCode byte
 
 const (
-	//OK is invented for no error
-	EcOK                                 ExceptionCode = 0
+	//EcOK is invented for no error
+	EcOK ExceptionCode = 0
+	//EcInternal is invented for error reading ExceptionCode
+	EcInternal                           ExceptionCode = 255
 	EcIllegalFunction                    ExceptionCode = 1
 	EcIllegalDataAddress                 ExceptionCode = 2
 	EcIllegalDataValue                   ExceptionCode = 3
@@ -101,12 +103,30 @@ func ErrorReplyPacket(req PDU, e ExceptionCode) PDU {
 	return PDU([]byte{byte(fc), byte(e)})
 }
 
+func (p PDU) GetErrorCode() ExceptionCode {
+	if p.GetFunctionCode().Valid() {
+		return EcOK
+	}
+	if len(p) < 2 {
+		return EcInternal
+	}
+	return ExceptionCode(p[1])
+}
+
 //RepToWrite assumes the request is a write, and make the associated response
-func (p PDU) RepToWrite() PDU{
-	if len(p) > 5{
+func (p PDU) RepToWrite() PDU {
+	if len(p) > 5 {
 		p = p[:5] //works for 5,6,15,16
 	}
 	return p
+}
+
+//MatchPDU returns true if ans is a valid reply to ask, inclusding normal and
+//error code replies.
+func MatchPDU(ask PDU, ans PDU) bool {
+	rf := ask.GetFunctionCode()
+	af := ans.GetFunctionCode()
+	return rf == af%128
 }
 
 //Validate tests for errors in a received PDU packet.
