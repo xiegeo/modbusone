@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestRTU(t *testing.T) {
@@ -40,6 +41,25 @@ func TestRTU(t *testing.T) {
 				t.Fatal("Expected error here")
 			}
 			t.Log("expected err:", err)
+		})
+	}
+}
+
+func TestRTUDelay(t *testing.T) {
+	testCases := []struct {
+		bw    int
+		delay time.Duration
+	}{
+		{1, 35 * 11 * time.Second / 10},
+		{19200, 2005209},
+		{38400, 1750000},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("Delay for bw:%v", tc.bw), func(t *testing.T) {
+			d := RTUMinDelay(tc.bw)
+			if d != tc.delay {
+				t.Fatalf("expected:%v got:%v", tc.delay, d)
+			}
 		})
 	}
 }
