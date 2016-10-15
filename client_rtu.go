@@ -111,10 +111,24 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 			debugf("RTUClient drop unexpected action:%s\n", act.t)
 			continue
 		}
+		ap := act.data.fastGetPDU()
+		afc := ap.GetFunctionCode()
+		if afc.WriteToServer() {
+			out, err := handler.OnOutput(ap)
+			if err != nil {
+				sendError(act.errChan, err)
+				continue
+			}
+			act.data = MakeRTU(act.data[0], out)
+			ap = act.data.fastGetPDU()
+		}
 		time.Sleep(delay)
 		_, ioerr = c.com.Write(act.data)
 		if hasError() {
 			return sendGetError(act.errChan)
+		}
+		if act.data[0] == 0 {
+			continue // do not wait for read on multicast
 		}
 		timeOutChan := time.After(c.GetTransactionTimeOut(len(act.data), MaxRTUSize))
 
@@ -143,6 +157,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					sendError(act.errChan, err)
 					break READ_LOOP
 				}
+				hasErr, fc := rp.GetFunctionCode().WithoutError()
+				if hasErr && fc == afc {
+					handler.OnError(ap, rp)
+					sendError(act.errChan, fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp)))
+					break READ_LOOP
+				}
 				if !MatchPDU(act.data.fastGetPDU(), rp) {
 					sendError(act.errChan, fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp)))
 					break READ_LOOP
@@ -150,6 +170,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 				ec := rp.GetErrorCode()
 				if ec != EcOK {
 					sendError(act.errChan, ec)
+					break READ_LOOP
+				}
+				if !afc.WriteToServer() {
+					//read from server, write here
+					err := handler.OnInput(rp)
+					sendError(act.errChan, err)
 					break READ_LOOP
 				}
 				sendError(act.errChan, nil)

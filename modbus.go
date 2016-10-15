@@ -37,7 +37,7 @@ const (
 
 //Valid test if FunctionCode is a allowed function, and not an error response
 func (f FunctionCode) Valid() bool {
-	return (f > 0 && f < 7) || (f > 14 && f < 17) || (f > 21 && f < 23)
+	return (f > 0 && f < 7) || (f > 14 && f < 17) || (f > 21 && f < 24)
 }
 
 //WriteToServer returns true if the FunctionCode is a write.
@@ -60,15 +60,15 @@ func (f FunctionCode) ReadToServer() bool {
 	return false
 }
 
-//IsError test if FunctionCode is an error response, and also return the version
+//WithoutError test if FunctionCode is an error response, and also return the version
 //without error flag set
-func (f FunctionCode) IsError() (bool, FunctionCode) {
-	return f > 0x0f, f & 0x0f
+func (f FunctionCode) WithoutError() (bool, FunctionCode) {
+	return f > 0x7f, f & 0x7f
 }
 
 //WithError return a copy of FunctionCode with the error flag set.
-func (f FunctionCode) WithError() (bool, FunctionCode) {
-	return f > 0x0f, f & 0x0f
+func (f FunctionCode) WithError() FunctionCode {
+	return f + 0x80
 }
 
 //Modbus exception codes
