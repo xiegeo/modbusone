@@ -58,14 +58,14 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		fc := p.GetFunctionCode()
 		var out PDU
 		if fc.ReadToServer() {
-			out, err = handler.OnOutput(p)
+			out, err = handler.OnRead(p)
 			if err != nil {
 				debugf("RTUServer handler.OnOutput error:%v\n", err)
 				wec(EcServerDeviceFailure)
 				continue
 			}
 		} else if fc.WriteToServer() {
-			err = handler.OnInput(p)
+			err = handler.OnWrite(p)
 			if err != nil {
 				debugf("RTUServer handler.OnInput error:%v\n", err)
 				wec(EcServerDeviceFailure)

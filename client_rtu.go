@@ -114,7 +114,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
 		if afc.WriteToServer() {
-			out, err := handler.OnOutput(ap)
+			out, err := handler.OnRead(ap)
 			if err != nil {
 				sendError(act.errChan, err)
 				continue
@@ -174,7 +174,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 				}
 				if !afc.WriteToServer() {
 					//read from server, write here
-					err := handler.OnInput(rp)
+					err := handler.OnWrite(rp)
 					sendError(act.errChan, err)
 					break READ_LOOP
 				}

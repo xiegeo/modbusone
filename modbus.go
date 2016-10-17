@@ -7,11 +7,11 @@ import (
 type ProtocalHandler interface {
 	//OnInput is called on the server for a write request,
 	//or on the client for read reply.
-	OnInput(in PDU) error
+	OnWrite(in PDU) error
 
 	//OnOutput is called on the server for a read request,
 	//or on the client before write requst.
-	OnOutput(req PDU) (out PDU, err error)
+	OnRead(req PDU) (out PDU, err error)
 
 	//OnError is called on the client when it receive a well formed
 	//error from server
@@ -22,22 +22,22 @@ type ProtocalHandler interface {
 type FunctionCode byte
 
 const (
-	FcReadCoils                  FunctionCode = 1
-	FcReadDiscreteInputs         FunctionCode = 2
-	FcReadHoldingRegisters       FunctionCode = 3
-	FcReadInputRegisters         FunctionCode = 4
-	FcWriteSingleCoil            FunctionCode = 5
-	FcWriteSingleRegister        FunctionCode = 6
-	FcWriteMultipleCoils         FunctionCode = 15
-	FcWriteMultipleRegisters     FunctionCode = 16
-	FcMaskWriteRegister          FunctionCode = 22
-	FcReadWriteMultipleRegisters FunctionCode = 23
+	FcReadCoils              FunctionCode = 1
+	FcReadDiscreteInputs     FunctionCode = 2
+	FcReadHoldingRegisters   FunctionCode = 3
+	FcReadInputRegisters     FunctionCode = 4
+	FcWriteSingleCoil        FunctionCode = 5
+	FcWriteSingleRegister    FunctionCode = 6
+	FcWriteMultipleCoils     FunctionCode = 15
+	FcWriteMultipleRegisters FunctionCode = 16
+	//FcMaskWriteRegister          FunctionCode = 22
+	//FcReadWriteMultipleRegisters FunctionCode = 23
 	//FcReadFIFOQueue              FunctionCode = 24 //not supported for now
 )
 
 //Valid test if FunctionCode is a allowed function, and not an error response
 func (f FunctionCode) Valid() bool {
-	return (f > 0 && f < 7) || (f > 14 && f < 17) || (f > 21 && f < 24)
+	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
 }
 
 //WriteToServer returns true if the FunctionCode is a write.
