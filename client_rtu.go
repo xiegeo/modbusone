@@ -174,7 +174,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 				}
 				if !afc.WriteToServer() {
 					//read from server, write here
-					err := handler.OnWrite(rp)
+					bs, err := rp.GetReplyValues()
+					if err != nil {
+						sendError(act.errChan, err)
+						break READ_LOOP
+					}
+					err = handler.OnWrite(rp, bs)
 					sendError(act.errChan, err)
 					break READ_LOOP
 				}

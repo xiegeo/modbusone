@@ -7,11 +7,19 @@ import (
 type ProtocalHandler interface {
 	//OnInput is called on the server for a write request,
 	//or on the client for read reply.
-	OnWrite(in PDU) error
+	//For write to server on server side, data is part of req.
+	//For read from server on client side, req is the req from client, and
+	//data is part of reply.
+	OnWrite(req PDU, data []byte) error
 
 	//OnOutput is called on the server for a read request,
 	//or on the client before write requst.
-	OnRead(req PDU) (out PDU, err error)
+	//For read from server on the server side, req is from client and data is
+	//part of reply.
+	//For write to server on the client side, req is from local action
+	//(such as RTUClient.StartTransaction), and data will be added to req to send
+	//to server.
+	OnRead(req PDU) (data []byte, err error)
 
 	//OnError is called on the client when it receive a well formed
 	//error from server
@@ -38,6 +46,26 @@ const (
 //Valid test if FunctionCode is a allowed function, and not an error response
 func (f FunctionCode) Valid() bool {
 	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
+}
+
+func (f FunctionCode) MaxRange() uint16 {
+	return 0xFFFF
+}
+
+func (f FunctionCode) MaxPerPacket() uint16 {
+	switch f {
+	case FcReadCoils, FcReadDiscreteInputs:
+		return 2000
+	case FcReadHoldingRegisters, FcReadInputRegisters:
+		return 125 //0x007D
+	case FcWriteSingleCoil, FcWriteSingleRegister:
+		return 1
+	case FcWriteMultipleCoils:
+		return 0x07B0 //1968
+	case FcWriteMultipleRegisters:
+		return 0x007B
+	}
+	return 0 //unsupported functions
 }
 
 //WriteToServer returns true if the FunctionCode is a write.
@@ -94,6 +122,14 @@ func (e ExceptionCode) Error() string {
 	return fmt.Sprintf("ExceptionCode:%v", e)
 }
 
+func ToExceptionCode(err error) ExceptionCode {
+	e, ok := err.(ExceptionCode)
+	if ok {
+		return e
+	}
+	return EcServerDeviceFailure
+}
+
 //Modbus Protocol Data Unit
 type PDU []byte
 
@@ -130,18 +166,73 @@ func MatchPDU(ask PDU, ans PDU) bool {
 }
 
 //Validate tests for errors in a received PDU packet.
-//Returns EcOK if packet is valid,
+//Returns EcOK if packet is valid.
 func (p PDU) Validate() ExceptionCode {
 	if !p.GetFunctionCode().Valid() {
 		return EcIllegalFunction
+	}
+	if len(p) < 3 {
+		return EcIllegalDataAddress
 	}
 	//todo: check for errors 2 and 3
 	return EcOK
 }
 
+//GetFunctionCode returns the funciton code
 func (p PDU) GetFunctionCode() FunctionCode {
 	if len(p) <= 0 {
 		return FunctionCode(0)
 	}
 	return FunctionCode(p[0])
+}
+
+//GetAddress returns the stating address, behavior is undefined (can panic) if PDU
+//is invalide
+func (p PDU) GetAddress() uint16 {
+	return uint16(p[1])<<8 | uint16(p[2])
+}
+
+//GetRequestValues returns the values in a write request
+func (p PDU) GetRequestValues() ([]byte, error) {
+	max := p.GetFunctionCode().MaxPerPacket()
+	if max == 0 {
+		return nil, EcIllegalFunction
+	}
+	if max == 1 {
+		if len(p) != 5 {
+			return nil, EcIllegalDataValue
+		}
+		return p[3:], nil
+	}
+	lb := len(p) - 5
+	if lb < 1 {
+		//at least one byte of value is expected
+		return nil, EcIllegalDataValue
+	}
+	l := int(p[3])<<8 | int(p[4])
+	// check if l + start address is highter than max range
+	if l+int(p.GetAddress()) > int(p.GetFunctionCode().MaxRange()) {
+		return nil, EcIllegalDataAddress
+	}
+	if max <= 125 {
+		//16 bits registers
+		if lb != l*2 {
+			return nil, EcIllegalDataValue
+		}
+	} else {
+		//bools
+		if lb != (l+7)/8 {
+			return nil, EcIllegalDataValue
+		}
+	}
+	return p[5:], nil
+}
+
+//GetReplyValues returns the values in a read reply
+func (p PDU) GetReplyValues() ([]byte, error) {
+	l := len(p) - 2 //bytes of values
+	if l < 1 || l != int(p[1]) {
+		return nil, EcIllegalDataValue
+	}
+	return p[2:], nil
 }

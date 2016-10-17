@@ -28,8 +28,8 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		time.Sleep(delay)
 		_, ioerr = s.com.Write(MakeRTU(s.SlaveId, pdu))
 	}
-	wec := func(ec ExceptionCode) {
-		wp(ErrorReplyPacket(p, ec))
+	wec := func(err error) {
+		wp(ErrorReplyPacket(p, ToExceptionCode(err)))
 	}
 
 	for ioerr == nil {
@@ -61,14 +61,20 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			out, err = handler.OnRead(p)
 			if err != nil {
 				debugf("RTUServer handler.OnOutput error:%v\n", err)
-				wec(EcServerDeviceFailure)
+				wec(err)
 				continue
 			}
 		} else if fc.WriteToServer() {
-			err = handler.OnWrite(p)
+			data, err := p.GetRequestValues()
+			if err != nil {
+				debugf("RTUServer p.GetRequestValues error:%v\n", err)
+				wec(err)
+				continue
+			}
+			err = handler.OnWrite(p, data)
 			if err != nil {
 				debugf("RTUServer handler.OnInput error:%v\n", err)
-				wec(EcServerDeviceFailure)
+				wec(err)
 				continue
 			}
 			out = p.RepToWrite()

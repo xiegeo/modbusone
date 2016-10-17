@@ -22,8 +22,8 @@ type SimpleHandler struct {
 	OnError func(req PDU, errRep PDU)
 }
 
-func (h *SimpleHandler) OnInput(in PDU) error {
-	switch in.GetFunctionCode() {
+func (h *SimpleHandler) OnInput(req PDU, data []byte) error {
+	switch req.GetFunctionCode() {
 	case FcReadDiscreteInputs:
 
 	}
