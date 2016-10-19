@@ -22,10 +22,30 @@ type SimpleHandler struct {
 	OnError func(req PDU, errRep PDU)
 }
 
-func (h *SimpleHandler) OnInput(req PDU, data []byte) error {
-	switch req.GetFunctionCode() {
+func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
+	fc := req.GetFunctionCode()
+	address := req.GetAddress()
+	count := req.GetRequestCount()
+	var err error
+	switch fc {
 	case FcReadDiscreteInputs:
-
+		if h.WriteDiscreteInputs == nil {
+			return EcIllegalFunction
+		}
+		values, err := DataToBools(data, req.GetRequestCount(), fc)
+		if err != nil {
+			return err
+		}
+		return h.WriteDiscreteInputs(req.GetAddress(), values)
+	case FcReadCoils, FcWriteSingleCoil, FcWriteMultipleCoils:
+		if h.WriteCoils == nil {
+			return EcIllegalFunction
+		}
+		values, err := DataToBools(data, req.GetRequestCount(), fc)
+		if err != nil {
+			return err
+		}
+		return h.WriteDiscreteInputs(req.GetAddress(), values)
 	}
 	return nil
 }

@@ -49,10 +49,10 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			debugf("RTUServer drop packet to other id:%v\n", r[0])
 			continue
 		}
-		ec := p.Validate()
-		if ec != EcOK {
-			debugf("RTUServer auto return for error code:%v\n", ec)
-			wec(ec)
+		err = r.ValidateReply(p)
+		if err != nil {
+			debugf("RTUServer auto return for error:%v\n", err)
+			wec(err)
 			continue
 		}
 		fc := p.GetFunctionCode()

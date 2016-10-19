@@ -123,6 +123,9 @@ func (e ExceptionCode) Error() string {
 }
 
 func ToExceptionCode(err error) ExceptionCode {
+	if err == nil {
+		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
+	}
 	e, ok := err.(ExceptionCode)
 	if ok {
 		return e
@@ -157,7 +160,7 @@ func (p PDU) RepToWrite() PDU {
 	return p
 }
 
-//MatchPDU returns true if ans is a valid reply to ask, inclusding normal and
+//MatchPDU returns true if ans is a valid reply to ask, including normal and
 //error code replies.
 func MatchPDU(ask PDU, ans PDU) bool {
 	rf := ask.GetFunctionCode()
@@ -165,9 +168,9 @@ func MatchPDU(ask PDU, ans PDU) bool {
 	return rf == af%128
 }
 
-//Validate tests for errors in a received PDU packet.
-//Returns EcOK if packet is valid.
-func (p PDU) Validate() ExceptionCode {
+//ValidateRequest tests for errors in a received Request PDU packet.
+//Use ToExceptionCode to get the ExceptionCode for error
+func (p PDU) ValidateRequest() error {
 	if !p.GetFunctionCode().Valid() {
 		return EcIllegalFunction
 	}
@@ -175,7 +178,25 @@ func (p PDU) Validate() ExceptionCode {
 		return EcIllegalDataAddress
 	}
 	//todo: check for errors 2 and 3
-	return EcOK
+	return nil
+}
+
+//ValidateReply tests for errors and ExceptionCode in a received Reply PDU packet.
+//And test other errors for p in context of request r.
+//Use ToExceptionCode to get the ExceptionCode for error
+func (p PDU) ValidateReply(r PDU) error {
+	if len(p) < 2 {
+		return fmt.Errorf("PDU too short")
+	}
+	ecflag, fc := p.GetFunctionCode().WithoutError()
+	if fc != r.GetFunctionCode() {
+		return fmt.Errorf("FunctionCode request %v != reply %v", r.GetFunctionCode(), fc)
+	}
+	if ecflag {
+		return ExcptionsCode(p[1])
+	}
+
+	return nil
 }
 
 //GetFunctionCode returns the funciton code
@@ -186,10 +207,20 @@ func (p PDU) GetFunctionCode() FunctionCode {
 	return FunctionCode(p[0])
 }
 
-//GetAddress returns the stating address, behavior is undefined (can panic) if PDU
-//is invalide
+//GetAddress returns the stating address,
+//If PDU is invalide, behavior is undefined (can panic).
 func (p PDU) GetAddress() uint16 {
 	return uint16(p[1])<<8 | uint16(p[2])
+}
+
+//GetRequestCount returns the number of values requested,
+//If PDU is invalide, behavior is undefined (can panic).
+func (p PDU) GetRequestCount() uint16 {
+	max := p.GetFunctionCode().MaxPerPacket()
+	if max < 2 {
+		return max
+	}
+	return uint16(p[3])<<8 | uint16(p[4])
 }
 
 //GetRequestValues returns the values in a write request
@@ -209,8 +240,8 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		//at least one byte of value is expected
 		return nil, EcIllegalDataValue
 	}
-	l := int(p[3])<<8 | int(p[4])
-	// check if l + start address is highter than max range
+	l := int(p.GetRequestCount())
+	// check if start + count is highter than max range
 	if l+int(p.GetAddress()) > int(p.GetFunctionCode().MaxRange()) {
 		return nil, EcIllegalDataAddress
 	}
