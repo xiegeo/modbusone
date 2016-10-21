@@ -193,7 +193,7 @@ func (p PDU) ValidateReply(r PDU) error {
 		return fmt.Errorf("FunctionCode request %v != reply %v", r.GetFunctionCode(), fc)
 	}
 	if ecflag {
-		return ExcptionsCode(p[1])
+		return ExceptionCode(p[1])
 	}
 
 	return nil

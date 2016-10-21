@@ -49,7 +49,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			debugf("RTUServer drop packet to other id:%v\n", r[0])
 			continue
 		}
-		err = r.ValidateReply(p)
+		err = p.ValidateRequest()
 		if err != nil {
 			debugf("RTUServer auto return for error:%v\n", err)
 			wec(err)

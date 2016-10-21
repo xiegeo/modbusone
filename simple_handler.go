@@ -26,26 +26,25 @@ func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
 	fc := req.GetFunctionCode()
 	address := req.GetAddress()
 	count := req.GetRequestCount()
-	var err error
 	switch fc {
 	case FcReadDiscreteInputs:
 		if h.WriteDiscreteInputs == nil {
 			return EcIllegalFunction
 		}
-		values, err := DataToBools(data, req.GetRequestCount(), fc)
+		values, err := DataToBools(data, count, fc)
 		if err != nil {
 			return err
 		}
-		return h.WriteDiscreteInputs(req.GetAddress(), values)
+		return h.WriteDiscreteInputs(address, values)
 	case FcReadCoils, FcWriteSingleCoil, FcWriteMultipleCoils:
 		if h.WriteCoils == nil {
 			return EcIllegalFunction
 		}
-		values, err := DataToBools(data, req.GetRequestCount(), fc)
+		values, err := DataToBools(data, count, fc)
 		if err != nil {
 			return err
 		}
-		return h.WriteDiscreteInputs(req.GetAddress(), values)
+		return h.WriteCoils(address, values)
 	}
 	return nil
 }

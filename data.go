@@ -1,5 +1,10 @@
 package modbusone
 
+import (
+	"encoding/binary"
+	"fmt"
+)
+
 func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 	if fc == FcWriteSingleCoil {
 		if len(data) != 2 {
@@ -28,4 +33,62 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 		}
 	}
 	return r[:count], nil
+}
+
+func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
+	if fc == FcWriteSingleCoil {
+		if len(values) != 1 {
+			return nil, fmt.Errorf("FcWriteSingleCoil can not write %v coils", len(values))
+		}
+		if values[0] {
+			return []byte{0xff, 0x00}, nil
+		}
+		return []byte{0x00, 0x00}, nil
+	}
+
+	count := len(values)
+	byteCount := (count + 7) / 8
+	data := make([]byte, byteCount)
+
+	byteNr := 0
+	bitNr := uint8(0)
+	byteVal := uint8(0)
+
+	for v := 0; v < count; v++ {
+		if v == count-1 {
+			data[byteNr] = byteVal
+			break
+		}
+		if values[v] {
+			byteVal |= 1 << bitNr
+		}
+		if bitNr > 6 {
+			data[byteNr] = byteVal
+			byteVal = 0
+			bitNr = 0
+			byteNr++
+		} else {
+			bitNr++
+		}
+	}
+	return data, nil
+}
+func DataToRegisters(data []byte) ([]uint16, error) {
+	if len(data) < 2 || len(data)%2 != 0 {
+		return nil, EcIllegalDataValue
+	}
+	count := len(data) / 2
+	values := make([]uint16, count)
+	for i := range values {
+		values[i] = binary.BigEndian.Uint16(data[2*i:])
+	}
+	return values, nil
+}
+
+func RegistersToData(values []uint16) ([]byte, error) {
+	data := make([]byte, 2*len(values))
+	for i, v := range values {
+		binary.BigEndian.PutUint16(data[i*2:], v)
+	}
+	return data, nil
 }
