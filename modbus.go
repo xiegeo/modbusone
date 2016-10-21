@@ -4,6 +4,10 @@ import (
 	"fmt"
 )
 
+type Server interface {
+	Serve(handler ProtocalHandler) error
+}
+
 type ProtocalHandler interface {
 	//OnInput is called on the server for a write request,
 	//or on the client for read reply.

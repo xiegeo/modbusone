@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"time"
 )
 
@@ -14,6 +14,14 @@ type RTUServer struct {
 }
 
 const MaxRTUSize = 256
+
+func NewRTUServer(com SerialPort, slaveId byte) *RTUServer {
+	r := RTUServer{
+		com:     com,
+		SlaveId: slaveId,
+	}
+	return &r
+}
 
 //Serve runs the server and only returns after unrecoverable error, such as com is closed.
 //Right now Read is assumed to only read full packets, as per RTU delay based spec.
@@ -94,10 +102,20 @@ func (s *RTUServer) StartTransaction(req PDU) error {
 	return errors.New("transactions can only be started from the client side")
 }
 
+func Uint64ToSlaveId(n uint64) (byte, error) {
+	if n > 247 {
+		return 0, errors.New("slaveId must be less than 248")
+	}
+	return byte(n), nil
+}
+
 //where to print debug messages
-var DebugOut = os.Stdout
+var DebugOut io.Writer = nil
 
 func debugf(format string, a ...interface{}) {
+	if DebugOut == nil {
+		return
+	}
 	fmt.Fprintf(DebugOut, "[%v]", time.Now())
 	fmt.Fprintf(DebugOut, format, a...)
 }
