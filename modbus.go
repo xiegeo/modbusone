@@ -130,6 +130,9 @@ func ToExceptionCode(err error) ExceptionCode {
 	if ok {
 		return e
 	}
+	if err == FcNotSupportedError {
+		return EcIllegalFunction
+	}
 	return EcServerDeviceFailure
 }
 
