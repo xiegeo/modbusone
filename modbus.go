@@ -123,7 +123,7 @@ const (
 )
 
 func (e ExceptionCode) Error() string {
-	return fmt.Sprintf("ExceptionCode:%v", e)
+	return fmt.Sprintf("ExceptionCode:0x%02X", byte(e))
 }
 
 func ToExceptionCode(err error) ExceptionCode {
@@ -143,13 +143,13 @@ func ToExceptionCode(err error) ExceptionCode {
 //Modbus Protocol Data Unit
 type PDU []byte
 
-//ErrorReplyPacket make a PDU packet to reply to request req with ExceptionCode e
-func ErrorReplyPacket(req PDU, e ExceptionCode) PDU {
+//ExceptionReplyPacket make a PDU packet to reply to request req with ExceptionCode e
+func ExceptionReplyPacket(req PDU, e ExceptionCode) PDU {
 	fc := req.GetFunctionCode()
 	return PDU([]byte{byte(fc), byte(e)})
 }
 
-func (p PDU) GetErrorCode() ExceptionCode {
+func (p PDU) GetExceptionCode() ExceptionCode {
 	if p.GetFunctionCode().Valid() {
 		return EcOK
 	}

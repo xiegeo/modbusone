@@ -167,7 +167,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					sendError(act.errChan, fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp)))
 					break READ_LOOP
 				}
-				ec := rp.GetErrorCode()
+				ec := rp.GetExceptionCode()
 				if ec != EcOK {
 					sendError(act.errChan, ec)
 					break READ_LOOP

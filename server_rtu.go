@@ -37,11 +37,12 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		_, ioerr = s.com.Write(MakeRTU(s.SlaveId, pdu))
 	}
 	wec := func(err error) {
-		wp(ErrorReplyPacket(p, ToExceptionCode(err)))
+		wp(ExceptionReplyPacket(p, ToExceptionCode(err)))
 	}
 
 	for ioerr == nil {
 		var n int
+		debugf("RTUServer wait for read\n")
 		n, ioerr = s.com.Read(rb)
 		if ioerr != nil {
 			return ioerr
@@ -116,6 +117,6 @@ func debugf(format string, a ...interface{}) {
 	if DebugOut == nil {
 		return
 	}
-	fmt.Fprintf(DebugOut, "[%v]", time.Now())
+	fmt.Fprintf(DebugOut, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
 	fmt.Fprintf(DebugOut, format, a...)
 }

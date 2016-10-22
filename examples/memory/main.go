@@ -51,12 +51,13 @@ func main() {
 	} else {
 		device = modbusone.NewRTUServer(com, id)
 	}
-	out := os.Stdout
 	h := modbusone.SimpleHandler{
 		ReadDiscreteInputs: func(address, quantity uint16) ([]bool, error) {
+			fmt.Printf("ReadDiscreteInputs from %v, quantity %v\n", address, quantity)
 			return discretes[address : address+quantity], nil
 		},
 		WriteDiscreteInputs: func(address uint16, values []bool) error {
+			fmt.Printf("WriteDiscreteInputs from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
 				discretes[address+uint16(i)] = v
 			}
@@ -64,9 +65,11 @@ func main() {
 		},
 
 		ReadCoils: func(address, quantity uint16) ([]bool, error) {
+			fmt.Printf("ReadCoils from %v, quantity %v\n", address, quantity)
 			return coils[address : address+quantity], nil
 		},
 		WriteCoils: func(address uint16, values []bool) error {
+			fmt.Printf("WriteCoils from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
 				coils[address+uint16(i)] = v
 			}
@@ -74,9 +77,11 @@ func main() {
 		},
 
 		ReadInputRegisters: func(address, quantity uint16) ([]uint16, error) {
+			fmt.Printf("ReadInputRegisters from %v, quantity %v\n", address, quantity)
 			return inputRegisters[address : address+quantity], nil
 		},
 		WriteInputRegisters: func(address uint16, values []uint16) error {
+			fmt.Printf("WriteInputRegisters from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
 				inputRegisters[address+uint16(i)] = v
 			}
@@ -84,9 +89,11 @@ func main() {
 		},
 
 		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
+			fmt.Printf("ReadHoldingRegisters from %v, quantity %v\n", address, quantity)
 			return holdingRegisters[address : address+quantity], nil
 		},
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
+			fmt.Printf("WriteHoldingRegisters from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
 				holdingRegisters[address+uint16(i)] = v
 			}
@@ -94,7 +101,7 @@ func main() {
 		},
 
 		OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
-			fmt.Fprintf(out, "error recived: %v from req:\n", errRep, req)
+			fmt.Printf("error recived: %v from req:\n", errRep, req)
 		},
 	}
 	err = device.Serve(&h)
