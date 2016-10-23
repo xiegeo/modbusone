@@ -114,12 +114,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
 		if afc.WriteToServer() {
-			out, err := handler.OnRead(ap)
+			data, err := handler.OnRead(ap)
 			if err != nil {
 				sendError(act.errChan, err)
 				continue
 			}
-			act.data = MakeRTU(act.data[0], out)
+			act.data = MakeRTU(act.data[0], ap.MakeRequestData(data))
 			ap = act.data.fastGetPDU()
 		}
 		time.Sleep(delay)

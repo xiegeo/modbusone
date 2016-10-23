@@ -160,9 +160,9 @@ func (p PDU) GetExceptionCode() ExceptionCode {
 }
 
 //RepToWrite assumes the request is a write, and make the associated response
-func (p PDU) RepToWrite() PDU {
+func (p PDU) MakeReply() PDU {
 	if len(p) > 5 {
-		p = p[:5] //works for 5,6,15,16
+		return p[:5] //works for 5,6,15,16
 	}
 	return p
 }
@@ -273,4 +273,20 @@ func (p PDU) GetReplyValues() ([]byte, error) {
 		return nil, EcIllegalDataValue
 	}
 	return p[2:], nil
+}
+
+func (p PDU) MakeReplyData(data []byte) PDU {
+	return PDU(append([]byte{byte(p.GetFunctionCode()), byte(len(data))}, data...))
+}
+
+func (p PDU) MakeRequestData(data []byte) PDU {
+	fc := p.GetFunctionCode()
+	switch fc {
+	case FcWriteSingleCoil, FcWriteSingleRegister:
+		return append(p[:3], data...)
+	case FcWriteMultipleCoils, FcWriteMultipleRegisters:
+		return append(p[:5], data...)
+	}
+	debugf("MakeRequestData unsupported for %v\n", fc)
+	return nil
 }

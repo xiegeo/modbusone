@@ -35,6 +35,7 @@ func (s *SerialPort) Read(b []byte) (int, error) {
 	return s.port.Read(b)
 }
 func (s *SerialPort) Write(b []byte) (int, error) {
+	debugf("SerialPort Write:%x\n", b)
 	return s.port.Write(b)
 }
 

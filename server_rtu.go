@@ -32,12 +32,15 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	var p PDU
 
 	var ioerr error //make continue do io error checking
-	wp := func(pdu PDU) {
+	wp := func(pdu PDU, slaveId byte) {
+		if slaveId == 0 {
+			return
+		}
 		time.Sleep(delay)
-		_, ioerr = s.com.Write(MakeRTU(s.SlaveId, pdu))
+		_, ioerr = s.com.Write(MakeRTU(slaveId, pdu))
 	}
-	wec := func(err error) {
-		wp(ExceptionReplyPacket(p, ToExceptionCode(err)))
+	wec := func(err error, slaveId byte) {
+		wp(ExceptionReplyPacket(p, ToExceptionCode(err)), slaveId)
 	}
 
 	for ioerr == nil {
@@ -61,35 +64,32 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		err = p.ValidateRequest()
 		if err != nil {
 			debugf("RTUServer auto return for error:%v\n", err)
-			wec(err)
+			wec(err, r[0])
 			continue
 		}
 		fc := p.GetFunctionCode()
-		var out PDU
 		if fc.ReadToServer() {
-			out, err = handler.OnRead(p)
+			data, err := handler.OnRead(p)
 			if err != nil {
 				debugf("RTUServer handler.OnOutput error:%v\n", err)
-				wec(err)
+				wec(err, r[0])
 				continue
 			}
+			wp(p.MakeReplyData(data), r[0])
 		} else if fc.WriteToServer() {
 			data, err := p.GetRequestValues()
 			if err != nil {
 				debugf("RTUServer p.GetRequestValues error:%v\n", err)
-				wec(err)
+				wec(err, r[0])
 				continue
 			}
 			err = handler.OnWrite(p, data)
 			if err != nil {
 				debugf("RTUServer handler.OnInput error:%v\n", err)
-				wec(err)
+				wec(err, r[0])
 				continue
 			}
-			out = p.RepToWrite()
-		}
-		if !r.IsMulticast() {
-			wp(out)
+			wp(p.MakeReply(), r[0])
 		}
 	}
 	return ioerr
