@@ -123,7 +123,7 @@ func fillAm3() {
 		discretes[i] = i%3 == 0
 	}
 	for i := range coils {
-		discretes[i] = i%3 == 0
+		coils[i] = i%3 == 0
 	}
 	for i := range inputRegisters {
 		inputRegisters[i] = uint16(i * 3)
