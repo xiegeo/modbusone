@@ -55,22 +55,21 @@ func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 	byteVal := uint8(0)
 
 	for v := 0; v < count; v++ {
-		if v == count-1 {
-			data[byteNr] = byteVal
-			break
-		}
 		if values[v] {
 			byteVal |= 1 << bitNr
 		}
-		if bitNr > 6 {
+		if bitNr == 7 {
 			data[byteNr] = byteVal
 			byteVal = 0
 			bitNr = 0
 			byteNr++
+		} else if v+1 == count {
+			data[byteNr] = byteVal
 		} else {
 			bitNr++
 		}
 	}
+
 	return data, nil
 }
 func DataToRegisters(data []byte) ([]uint16, error) {
