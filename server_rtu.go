@@ -9,13 +9,13 @@ import (
 )
 
 type RTUServer struct {
-	com     SerialPort
+	com     SerialContext
 	SlaveId byte
 }
 
 const MaxRTUSize = 256
 
-func NewRTUServer(com SerialPort, slaveId byte) *RTUServer {
+func NewRTUServer(com SerialContext, slaveId byte) *RTUServer {
 	r := RTUServer{
 		com:     com,
 		SlaveId: slaveId,
@@ -26,7 +26,7 @@ func NewRTUServer(com SerialPort, slaveId byte) *RTUServer {
 //Serve runs the server and only returns after unrecoverable error, such as com is closed.
 //Right now Read is assumed to only read full packets, as per RTU delay based spec.
 func (s *RTUServer) Serve(handler ProtocalHandler) error {
-	delay := RTUMinDelay(s.com.BaudRate)
+	delay := s.com.MinDelay()
 
 	rb := make([]byte, MaxRTUSize)
 	var p PDU

@@ -54,9 +54,11 @@ func TestRTUDelay(t *testing.T) {
 		{19200, 2005209},
 		{38400, 1750000},
 	}
+	p := SerialPort{}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Delay for bw:%v", tc.bw), func(t *testing.T) {
-			d := RTUMinDelay(tc.bw)
+			p.BaudRate = tc.bw
+			d := p.MinDelay()
 			if d != tc.delay {
 				t.Fatalf("expected:%v got:%v", tc.delay, d)
 			}

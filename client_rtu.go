@@ -8,13 +8,13 @@ import (
 )
 
 type RTUClient struct {
-	com                  SerialPort
+	com                  SerialContext
 	SlaveId              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
 }
 
-func NewRTUCLient(com SerialPort, slaveId byte) *RTUClient {
+func NewRTUCLient(com SerialContext, slaveId byte) *RTUClient {
 	r := RTUClient{
 		com:                  com,
 		SlaveId:              slaveId,
@@ -30,7 +30,7 @@ func (c *RTUClient) SetServerProcessingTime(t time.Duration) {
 
 func (c *RTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
 	l := reqLen + ansLen
-	return RTUBytesDelay(l, c.com.BaudRate) + c.serverProcessingTime
+	return c.com.BytesDelay(l) + c.serverProcessingTime
 }
 
 type rtuAction struct {
@@ -61,7 +61,7 @@ func (a actionType) String() string {
 //Serves RTUClient side handlers, must close transport after error is returned
 //to clean up.
 func (c *RTUClient) Serve(handler ProtocalHandler) error {
-	delay := RTUMinDelay(c.com.BaudRate)
+	delay := c.com.MinDelay()
 
 	var ioerr error //irrecoverable io errors
 	var readerr error
