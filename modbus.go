@@ -149,16 +149,6 @@ func ExceptionReplyPacket(req PDU, e ExceptionCode) PDU {
 	return PDU([]byte{byte(fc), byte(e)})
 }
 
-func (p PDU) GetExceptionCode() ExceptionCode {
-	if p.GetFunctionCode().Valid() {
-		return EcOK
-	}
-	if len(p) < 2 {
-		return EcInternal
-	}
-	return ExceptionCode(p[1])
-}
-
 //RepToWrite assumes the request is a write, and make the associated response
 func (p PDU) MakeReply() PDU {
 	if len(p) > 5 {
@@ -278,7 +268,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 func (p PDU) GetReplyValues() ([]byte, error) {
 	l := len(p) - 2 //bytes of values
 	if l < 1 || l != int(p[1]) {
-		return nil, EcIllegalDataValue
+		return nil, fmt.Errorf("length mismatch with bytes")
 	}
 	return p[2:], nil
 }

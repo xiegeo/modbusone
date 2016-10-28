@@ -144,8 +144,8 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					debugf("RTUClient actions closed\n")
 					return sendGetError(act.errChan)
 				}
-				if act.t != read {
-					ioerr = fmt.Errorf("unexpected action:%s", act.t)
+				if react.t != read {
+					ioerr = fmt.Errorf("unexpected action:%s", react.t)
 					return sendGetError(act.errChan)
 				}
 				if react.data[0] != act.data[0] {
@@ -167,11 +167,6 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					sendError(act.errChan, fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp)))
 					break READ_LOOP
 				}
-				ec := rp.GetExceptionCode()
-				if ec != EcOK {
-					sendError(act.errChan, ec)
-					break READ_LOOP
-				}
 				if !afc.WriteToServer() {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
@@ -179,7 +174,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 						sendError(act.errChan, err)
 						break READ_LOOP
 					}
-					err = handler.OnWrite(rp, bs)
+					err = handler.OnWrite(ap, bs)
 					sendError(act.errChan, err)
 					break READ_LOOP
 				}
@@ -195,7 +190,7 @@ func (c *RTUClient) IsClient() bool {
 }
 
 //StartTransaction starts a transaction, and returns a channel that returns an error
-//or nil, with the default slaveId.
+//or nil, with the default slaveId. For writes, the data part will be filled in by handler.
 func (c *RTUClient) StartTransaction(req PDU) <-chan error {
 	return c.StartTransactionToServer(c.SlaveId, req)
 }

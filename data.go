@@ -27,7 +27,7 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 
 	byteCount := len(data)
 	if (count+7)/8 != uint16(byteCount) {
-		debugf("unexpected sized: bools %v, bytes %v", count, byteCount)
+		debugf("unexpected size: bools %v, bytes %v", count, byteCount)
 		return nil, EcIllegalDataValue
 	}
 	r := make([]bool, byteCount*8)
@@ -78,7 +78,7 @@ func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 }
 func DataToRegisters(data []byte) ([]uint16, error) {
 	if len(data) < 2 || len(data)%2 != 0 {
-		debugf("unexpected sized: bytes %v", len(data))
+		debugf("unexpected odd number of bytes %v", len(data))
 		return nil, EcIllegalDataValue
 	}
 	count := len(data) / 2
