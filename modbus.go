@@ -238,32 +238,40 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 	}
 	if max == 1 {
 		if len(p) != 5 {
+			debugf("fc %v got %v pdu bytes, expected 5", p.GetFunctionCode(), len(p))
 			return nil, EcIllegalDataValue
 		}
 		return p[3:], nil
 	}
-	lb := len(p) - 5
+	lb := len(p) - 6
 	if lb < 1 {
-		//at least one byte of value is expected
+		debugf("fc %v got %v pdu bytes, expected > 6", p.GetFunctionCode(), len(p))
+		return nil, EcIllegalDataValue
+	}
+	if lb != int(p[5]) {
+		debugf("decleared %v bytes of data, but got %v bytes", p[5], lb)
 		return nil, EcIllegalDataValue
 	}
 	l := int(p.GetRequestCount())
 	// check if start + count is highter than max range
 	if l+int(p.GetAddress()) > int(p.GetFunctionCode().MaxRange()) {
+		debugf("address out of range")
 		return nil, EcIllegalDataAddress
 	}
 	if max <= 125 {
 		//16 bits registers
 		if lb != l*2 {
+			debugf("%v registers does not fit in %v bytes", l, lb)
 			return nil, EcIllegalDataValue
 		}
 	} else {
 		//bools
 		if lb != (l+7)/8 {
+			debugf("%v bools does not fit in %v bytes", l, lb)
 			return nil, EcIllegalDataValue
 		}
 	}
-	return p[5:], nil
+	return p[6:], nil
 }
 
 //GetReplyValues returns the values in a read reply
