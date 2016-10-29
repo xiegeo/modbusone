@@ -77,15 +77,23 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 //The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
 func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
 	if count > f.MaxPerPacket() {
-		return nil, fmt.Errorf("%v can not pack %v at once", f, count)
+		return nil, fmt.Errorf("%v can not pack %v at once\n", f, count)
 	}
 	if uint32(address)+uint32(count) > uint32(f.MaxRange()) {
-		return nil, fmt.Errorf("%v + %v out of range %v", address, count-1, f.MaxRange())
+		return nil, fmt.Errorf("%v + %v out of range %v\n", address, count-1, f.MaxRange())
 	}
+	header := []byte{byte(f), byte(address >> 8), byte(address)}
 	if f.MaxPerPacket() == 1 {
-		return PDU([]byte{byte(f), byte(address >> 8), byte(address)}), nil
+		return PDU(header), nil
 	}
-	return PDU([]byte{byte(f), byte(address >> 8), byte(address), byte(count >> 8), byte(count)}), nil
+	header = append(header, byte(count>>8), byte(count))
+	if f == FcWriteMultipleCoils {
+		return PDU(append(header, byte((count+7)/8))), nil
+	}
+	if f == FcWriteMultipleRegisters {
+		return PDU(append(header, byte(count*2))), nil
+	}
+	return PDU(header), nil
 }
 
 //WriteToServer returns true if the FunctionCode is a write.
@@ -291,7 +299,7 @@ func (p PDU) MakeWriteRequest(data []byte) PDU {
 	case FcWriteSingleCoil, FcWriteSingleRegister:
 		return append(p[:3], data...)
 	case FcWriteMultipleCoils, FcWriteMultipleRegisters:
-		return append(p[:5], data...)
+		return append(p[:6], data...)
 	}
 	debugf("MakeRequestData unsupported for %v\n", fc)
 	return nil

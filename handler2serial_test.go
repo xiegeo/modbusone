@@ -44,12 +44,12 @@ func TestHandler(t *testing.T) {
 
 	ch := &SimpleHandler{
 		OnErrorImp: func(req PDU, errRep PDU) {
-			subtest.Errorf("client handler recived error:%v in request:%v", errRep, req)
+			subtest.Errorf("client handler recived error:%x in request:%x", errRep, req)
 		},
 	}
 	sh := &SimpleHandler{
 		OnErrorImp: func(req PDU, errRep PDU) {
-			subtest.Errorf("server handler recived error:%v in request:%v", errRep, req)
+			subtest.Errorf("server handler recived error:%x in request:%x", errRep, req)
 		},
 	}
 
@@ -87,7 +87,7 @@ func TestHandler(t *testing.T) {
 			true, true, false, true, false, true, true, false,
 			false, true, false, false, true, true, false, true,
 			false, true, true, true, false, false, false, false,
-			true, true, false, true, true, false, false, false}
+			true, true, false, true, true}
 		sh.ReadCoils = func(address, quantity uint16) ([]bool, error) {
 			return vs, nil
 		}
@@ -113,7 +113,7 @@ func TestHandler(t *testing.T) {
 		vs := []bool{
 			false, false, true, true, false, true, false, true,
 			true, true, false, true, true, false, true, true,
-			true, false, true, false, true, true, false, false}
+			true, false, true, false, true, true}
 		sh.ReadDiscreteInputs = func(address, quantity uint16) ([]bool, error) {
 			return vs, nil
 		}
@@ -174,7 +174,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Force Single Coil (FC=05)"), func(t *testing.T) {
+	t.Run(fmt.Sprintf("Write Single Coil (FC=05)"), func(t *testing.T) {
 		subtest = t
 		header, err := FcWriteSingleCoil.MakeRequestHeader(0x00AC, 1)
 		if err != nil {
@@ -192,6 +192,76 @@ func TestHandler(t *testing.T) {
 			return nil
 		}
 		ch.ReadCoils = func(address, quantity uint16) ([]bool, error) {
+			return vs, nil
+		}
+		testTrans(header, request, response)
+	})
+
+	t.Run(fmt.Sprintf("Write Single Register (FC=06)"), func(t *testing.T) {
+		subtest = t
+		header, err := FcWriteSingleRegister.MakeRequestHeader(0x0001, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := RTU([]byte{0x11, 0x06, 0x00, 0x01, 0x00, 0x03, 0x9A, 0x9B})
+		response := request
+		vs := []uint16{3}
+		sh.WriteHoldingRegisters = func(address uint16, values []uint16) error {
+			for i, b := range values {
+				if vs[i] != b {
+					t.Errorf("%v'th value changed", i)
+				}
+			}
+			return nil
+		}
+		ch.ReadHoldingRegisters = func(address, quantity uint16) ([]uint16, error) {
+			return vs, nil
+		}
+		testTrans(header, request, response)
+	})
+
+	t.Run(fmt.Sprintf("Write Multiple Coils (FC=15)"), func(t *testing.T) {
+		subtest = t
+		header, err := FcWriteMultipleCoils.MakeRequestHeader(0x0013, 0x000A)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := RTU([]byte{0x11, 0x0F, 0x00, 0x13, 0x00, 0x0A, 0x02, 0xCD, 0x01, 0xBF, 0x0B})
+		response := RTU([]byte{0x11, 0x0F, 0x00, 0x13, 0x00, 0x0A, 0x26, 0x99})
+		vs := []bool{
+			true, false, true, true, false, false, true, true,
+			true, false}
+		sh.WriteCoils = func(address uint16, values []bool) error {
+			for i, b := range values {
+				if vs[i] != b {
+					t.Errorf("%v'th value changed", i)
+				}
+			}
+			return nil
+		}
+		ch.ReadCoils = func(address, quantity uint16) ([]bool, error) {
+			return vs, nil
+		}
+		testTrans(header, request, response)
+	})
+	t.Run(fmt.Sprintf("Write Multiple Registers (FC=16)"), func(t *testing.T) {
+		subtest = t
+		header, err := FcWriteMultipleRegisters.MakeRequestHeader(0x0001, 0x0002)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := RTU([]byte{0x11, 0x10, 0x00, 0x01, 0x00, 0x02, 0x04, 0x00, 0x0A, 0x01, 0x02, 0xC6, 0xF0})
+		response := RTU([]byte{0x11, 0x10, 0x00, 0x01, 0x00, 0x02, 0x12, 0x98})
+		vs := []uint16{0x000A, 0x0102}
+		sh.WriteHoldingRegisters = func(address uint16, values []uint16) error {
+			for i, b := range values {
+				if vs[i] != b {
+					t.Errorf("%v'th value changed", i)
+				}
+			}
+			return nil
+		}
+		ch.ReadHoldingRegisters = func(address, quantity uint16) ([]uint16, error) {
 			return vs, nil
 		}
 		testTrans(header, request, response)
