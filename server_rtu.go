@@ -52,7 +52,8 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		}
 		r := RTU(rb[:n])
 		debugf("RTUServer read packet:%v\n", hex.EncodeToString(r))
-		p, err := r.GetPDU()
+		var err error
+		p, err = r.GetPDU()
 		if err != nil {
 			debugf("RTUServer drop read packet:%v\n", err)
 			continue
@@ -75,7 +76,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 				wec(err, r[0])
 				continue
 			}
-			wp(p.MakeReplyData(data), r[0])
+			wp(p.MakeReadReply(data), r[0])
 		} else if fc.WriteToServer() {
 			data, err := p.GetRequestValues()
 			if err != nil {
@@ -89,7 +90,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 				wec(err, r[0])
 				continue
 			}
-			wp(p.MakeReply(), r[0])
+			wp(p.MakeWriteReply(), r[0])
 		}
 	}
 	return ioerr

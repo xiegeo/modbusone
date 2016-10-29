@@ -72,6 +72,22 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 	return 0 //unsupported functions
 }
 
+//MakeRequestHeader makes a partical pdu without any data, to be used for
+//client side StartTransaction.
+//The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
+func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
+	if count > f.MaxPerPacket() {
+		return nil, fmt.Errorf("%v can not pack %v at once", f, count)
+	}
+	if uint32(address)+uint32(count) > uint32(f.MaxRange()) {
+		return nil, fmt.Errorf("%v + %v out of range %v", address, count-1, f.MaxRange())
+	}
+	if f.MaxPerPacket() == 1 {
+		return PDU([]byte{byte(f), byte(address >> 8), byte(address)}), nil
+	}
+	return PDU([]byte{byte(f), byte(address >> 8), byte(address), byte(count >> 8), byte(count)}), nil
+}
+
 //WriteToServer returns true if the FunctionCode is a write.
 //FunctionCode 23 is both a read and write.
 func (f FunctionCode) WriteToServer() bool {
@@ -146,15 +162,7 @@ type PDU []byte
 //ExceptionReplyPacket make a PDU packet to reply to request req with ExceptionCode e
 func ExceptionReplyPacket(req PDU, e ExceptionCode) PDU {
 	fc := req.GetFunctionCode()
-	return PDU([]byte{byte(fc), byte(e)})
-}
-
-//RepToWrite assumes the request is a write, and make the associated response
-func (p PDU) MakeReply() PDU {
-	if len(p) > 5 {
-		return p[:5] //works for 5,6,15,16
-	}
-	return p
+	return PDU([]byte{byte(fc) | 0x80, byte(e)})
 }
 
 //MatchPDU returns true if ans is a valid reply to ask, including normal and
@@ -166,7 +174,8 @@ func MatchPDU(ask PDU, ans PDU) bool {
 }
 
 //ValidateRequest tests for errors in a received Request PDU packet.
-//Use ToExceptionCode to get the ExceptionCode for error
+//Use ToExceptionCode to get the ExceptionCode for error.
+//Checks for errors 2 and 3 are done in GetRequestValues.
 func (p PDU) ValidateRequest() error {
 	if !p.GetFunctionCode().Valid() {
 		return EcIllegalFunction
@@ -174,7 +183,6 @@ func (p PDU) ValidateRequest() error {
 	if len(p) < 3 {
 		return EcIllegalDataAddress
 	}
-	//todo: check for errors 2 and 3
 	return nil
 }
 
@@ -205,13 +213,13 @@ func (p PDU) GetFunctionCode() FunctionCode {
 }
 
 //GetAddress returns the stating address,
-//If PDU is invalide, behavior is undefined (can panic).
+//If PDU is invalid, behavior is undefined (can panic).
 func (p PDU) GetAddress() uint16 {
 	return uint16(p[1])<<8 | uint16(p[2])
 }
 
 //GetRequestCount returns the number of values requested,
-//If PDU is invalide, behavior is undefined (can panic).
+//If PDU is invalid, behavior is undefined (can panic).
 func (p PDU) GetRequestCount() uint16 {
 	max := p.GetFunctionCode().MaxPerPacket()
 	if max < 2 {
@@ -273,11 +281,11 @@ func (p PDU) GetReplyValues() ([]byte, error) {
 	return p[2:], nil
 }
 
-func (p PDU) MakeReplyData(data []byte) PDU {
+func (p PDU) MakeReadReply(data []byte) PDU {
 	return PDU(append([]byte{byte(p.GetFunctionCode()), byte(len(data))}, data...))
 }
 
-func (p PDU) MakeRequestData(data []byte) PDU {
+func (p PDU) MakeWriteRequest(data []byte) PDU {
 	fc := p.GetFunctionCode()
 	switch fc {
 	case FcWriteSingleCoil, FcWriteSingleRegister:
@@ -287,4 +295,12 @@ func (p PDU) MakeRequestData(data []byte) PDU {
 	}
 	debugf("MakeRequestData unsupported for %v\n", fc)
 	return nil
+}
+
+//MakeWriteReply assumes the request is a write, and make the associated response
+func (p PDU) MakeWriteReply() PDU {
+	if len(p) > 5 {
+		return p[:5] //works for 5,6,15,16
+	}
+	return p
 }

@@ -119,7 +119,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 				sendError(act.errChan, err)
 				continue
 			}
-			act.data = MakeRTU(act.data[0], ap.MakeRequestData(data))
+			act.data = MakeRTU(act.data[0], ap.MakeWriteRequest(data))
 			ap = act.data.fastGetPDU()
 		}
 		time.Sleep(delay)
@@ -190,13 +190,14 @@ func (c *RTUClient) IsClient() bool {
 }
 
 //StartTransaction starts a transaction, and returns a channel that returns an error
-//or nil, with the default slaveId. For writes, the data part will be filled in by handler.
+//or nil, with the default slaveId.
+//For read from server, the PDU is sent as is (after been warped up in RTU)
+//For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *RTUClient) StartTransaction(req PDU) <-chan error {
 	return c.StartTransactionToServer(c.SlaveId, req)
 }
 
-//StartTransactionToServer starts a transaction, and returns a channel that returns an error
-//or nil, with a custom slaveId.
+//StartTransactionToServer starts a transaction, with a custom slaveId.
 func (c *RTUClient) StartTransactionToServer(slaveId byte, req PDU) <-chan error {
 	errChan := make(chan error)
 	c.actions <- rtuAction{start, MakeRTU(slaveId, req), errChan}
