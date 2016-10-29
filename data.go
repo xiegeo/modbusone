@@ -8,11 +8,11 @@ import (
 func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 	if fc == FcWriteSingleCoil {
 		if len(data) != 2 {
-			debugf("WriteSingleCoil need 2 bytes data")
+			debugf("WriteSingleCoil need 2 bytes data\n")
 			return nil, EcIllegalDataValue
 		}
 		if data[1] != 0 {
-			debugf("WriteSingleCoil unexpected %v %v", data[0], data[1])
+			debugf("WriteSingleCoil unexpected %v %v\n", data[0], data[1])
 			return nil, EcIllegalDataValue
 		}
 		if data[0] == 0 {

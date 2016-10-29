@@ -77,10 +77,10 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 //The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
 func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
 	if count > f.MaxPerPacket() {
-		return nil, fmt.Errorf("%v can not pack %v at once\n", f, count)
+		return nil, fmt.Errorf("%v can not pack %v at once", f, count)
 	}
 	if uint32(address)+uint32(count) > uint32(f.MaxRange()) {
-		return nil, fmt.Errorf("%v + %v out of range %v\n", address, count-1, f.MaxRange())
+		return nil, fmt.Errorf("%v + %v out of range %v", address, count-1, f.MaxRange())
 	}
 	header := []byte{byte(f), byte(address >> 8), byte(address)}
 	if f.MaxPerPacket() == 1 {

@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var _ = os.Stdin
+
 type mockSerial struct {
 	io.Reader
 	io.Writer
@@ -29,7 +31,7 @@ func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 //TestHandler runs through each of simplymodbus.ca's samples, conforms both
 //end-to-end behavior and wire format
 func TestHandler(t *testing.T) {
-	DebugOut = os.Stdout
+	//DebugOut = os.Stdout
 	slaveId := byte(0x11)
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
