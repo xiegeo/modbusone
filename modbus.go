@@ -194,24 +194,6 @@ func (p PDU) ValidateRequest() error {
 	return nil
 }
 
-//ValidateReply tests for errors and ExceptionCode in a received Reply PDU packet.
-//And test other errors for p in context of request r.
-//Use ToExceptionCode to get the ExceptionCode for error
-func (p PDU) ValidateReply(r PDU) error {
-	if len(p) < 2 {
-		return fmt.Errorf("PDU too short")
-	}
-	ecflag, fc := p.GetFunctionCode().WithoutError()
-	if fc != r.GetFunctionCode() {
-		return fmt.Errorf("FunctionCode request %v != reply %v", r.GetFunctionCode(), fc)
-	}
-	if ecflag {
-		return ExceptionCode(p[1])
-	}
-
-	return nil
-}
-
 //GetFunctionCode returns the funciton code
 func (p PDU) GetFunctionCode() FunctionCode {
 	if len(p) <= 0 {
