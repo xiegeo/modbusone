@@ -40,7 +40,7 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 	return r[:count], nil
 }
 
-//DataToBools translates []bool to the data part of PDU dependent on FunctionCode.
+//BoolsToData translates []bool to the data part of PDU dependent on FunctionCode.
 func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 	if fc == FcWriteSingleCoil {
 		if len(values) != 1 {

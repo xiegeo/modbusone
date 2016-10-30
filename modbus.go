@@ -174,7 +174,7 @@ func ToExceptionCode(err error) ExceptionCode {
 	return EcServerDeviceFailure
 }
 
-//Modbus Protocol Data Unit
+//PDU is the Modbus Protocol Data Unit
 type PDU []byte
 
 //ExceptionReplyPacket make a PDU packet to reply to request req with ExceptionCode e

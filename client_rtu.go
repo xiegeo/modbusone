@@ -68,7 +68,7 @@ func (a actionType) String() string {
 	case read:
 		return "read"
 	}
-	return fmt.Sprintf("%v", a)
+	return fmt.Sprintf("actionType %d", a)
 }
 
 //Serve serves RTUClient side handlers, must close SerialContext after error is
@@ -199,16 +199,16 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 }
 
 //StartTransaction starts a transaction, and returns a channel that returns an error
-//or nil, with the default slaveId.
+//or nil, with the default slaveID.
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *RTUClient) StartTransaction(req PDU) <-chan error {
 	return c.StartTransactionToServer(c.SlaveID, req)
 }
 
-//StartTransactionToServer starts a transaction, with a custom slaveId.
-func (c *RTUClient) StartTransactionToServer(slaveId byte, req PDU) <-chan error {
+//StartTransactionToServer starts a transaction, with a custom slaveID.
+func (c *RTUClient) StartTransactionToServer(slaveID byte, req PDU) <-chan error {
 	errChan := make(chan error)
-	c.actions <- rtuAction{start, MakeRTU(slaveId, req), errChan}
+	c.actions <- rtuAction{start, MakeRTU(slaveID, req), errChan}
 	return errChan
 }

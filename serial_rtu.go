@@ -6,7 +6,7 @@ import (
 	"github.com/xiegeo/modbusone/crc"
 )
 
-//Modbus RTU Application Data Unit
+//RTU is the Modbus RTU Application Data Unit
 type RTU []byte
 
 //MakeRTU makes a RTU with slaveID and PDU

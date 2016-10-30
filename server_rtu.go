@@ -8,11 +8,14 @@ import (
 	"time"
 )
 
+//RTUServer implements Server/Slave side logic for RTU over a SerialContext to
+//be used by a ProtocalHandler
 type RTUServer struct {
 	com     SerialContext
 	SlaveID byte
 }
 
+//MaxRTUSize is the max possible size of a RTU packet
 const MaxRTUSize = 256
 
 //NewRTUServer creates a RTU server on SerialContext listening on slaveID
@@ -108,7 +111,7 @@ func Uint64ToSlaveID(n uint64) (byte, error) {
 }
 
 //DebugOut sets where to print debug messages
-var DebugOut io.Writer = nil
+var DebugOut io.Writer
 
 func debugf(format string, a ...interface{}) {
 	if DebugOut == nil {

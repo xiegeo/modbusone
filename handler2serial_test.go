@@ -32,15 +32,15 @@ func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 //end-to-end behavior and wire format
 func TestHandler(t *testing.T) {
 	//DebugOut = os.Stdout
-	slaveId := byte(0x11)
+	slaveID := byte(0x11)
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 
 	cc := newMockSerial(r2, w1) //client connection
 	sc := newMockSerial(r1, w2) //server connection
 
-	client := NewRTUCLient(cc, slaveId)
-	server := NewRTUServer(sc, slaveId)
+	client := NewRTUCLient(cc, slaveID)
+	server := NewRTUServer(sc, slaveID)
 
 	subtest := t
 
