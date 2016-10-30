@@ -1,3 +1,7 @@
+//Package modbusone provides a Modbus library to implement both server and client
+//using one set of APIs.
+//
+//For sample code, see examples/memory, and handler2serial_test.go
 package modbusone
 
 import (
