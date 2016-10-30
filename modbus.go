@@ -4,10 +4,13 @@ import (
 	"fmt"
 )
 
+//Server is the common interface for all Clients and Servers that use ProtocalHandlers
 type Server interface {
 	Serve(handler ProtocalHandler) error
 }
 
+//ProtocalHandler handles PDUs based on if it is a write or read from the local
+//perspective.
 type ProtocalHandler interface {
 	//OnInput is called on the server for a write request,
 	//or on the client for read reply.
@@ -30,9 +33,10 @@ type ProtocalHandler interface {
 	OnError(req PDU, errRep PDU)
 }
 
-//Modebus function codes
+//FunctionCode Modebus function codes
 type FunctionCode byte
 
+//Implemented FunctionCodes
 const (
 	FcReadCoils              FunctionCode = 1
 	FcReadDiscreteInputs     FunctionCode = 2
@@ -47,15 +51,17 @@ const (
 	//FcReadFIFOQueue              FunctionCode = 24 //not supported for now
 )
 
-//Valid test if FunctionCode is a allowed function, and not an error response
+//Valid test if FunctionCode is a supported function, and not an error response
 func (f FunctionCode) Valid() bool {
 	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
 }
 
+//MaxRange is the largest address in the Modbus protocal.
 func (f FunctionCode) MaxRange() uint16 {
 	return 0xFFFF
 }
 
+//MaxPerPacket returns the max number of values a FunctionCode can carry.
 func (f FunctionCode) MaxPerPacket() uint16 {
 	switch f {
 	case FcReadCoils, FcReadDiscreteInputs:
@@ -127,9 +133,10 @@ func (f FunctionCode) WithError() FunctionCode {
 	return f + 0x80
 }
 
-//Modbus exception codes
+//ExceptionCode Modbus exception codes
 type ExceptionCode byte
 
+//Defined exception codes, 5 to 11 are not used
 const (
 	//EcOK is invented for no error
 	EcOK ExceptionCode = 0
@@ -146,10 +153,13 @@ const (
 	EcGatewayTargetDeviceFailedToRespond ExceptionCode = 11
 )
 
+//Error implements error for ExceptionCode
 func (e ExceptionCode) Error() string {
 	return fmt.Sprintf("ExceptionCode:0x%02X", byte(e))
 }
 
+//ToExceptionCode turns an error into an ExceptionCode (to send in PDU), best
+//effort with EcServerDeviceFailure as fail back.
 func ToExceptionCode(err error) ExceptionCode {
 	if err == nil {
 		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
@@ -158,7 +168,7 @@ func ToExceptionCode(err error) ExceptionCode {
 	if ok {
 		return e
 	}
-	if err == FcNotSupportedError {
+	if err == ErrFcNotSupported {
 		return EcIllegalFunction
 	}
 	return EcServerDeviceFailure
@@ -271,10 +281,13 @@ func (p PDU) GetReplyValues() ([]byte, error) {
 	return p[2:], nil
 }
 
+//MakeReadReply produces the reply PDU based on the request PDU and read data
 func (p PDU) MakeReadReply(data []byte) PDU {
 	return PDU(append([]byte{byte(p.GetFunctionCode()), byte(len(data))}, data...))
 }
 
+//MakeWriteRequest produces the request PDU based on the request PDU header and
+//(locally) read data
 func (p PDU) MakeWriteRequest(data []byte) PDU {
 	fc := p.GetFunctionCode()
 	switch fc {
@@ -287,7 +300,7 @@ func (p PDU) MakeWriteRequest(data []byte) PDU {
 	return nil
 }
 
-//MakeWriteReply assumes the request is a write, and make the associated response
+//MakeWriteReply assumes the request is a successful write, and make the associated response
 func (p PDU) MakeWriteReply() PDU {
 	if len(p) > 5 {
 		return p[:5] //works for 5,6,15,16

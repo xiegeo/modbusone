@@ -7,27 +7,39 @@ import (
 	"time"
 )
 
+//RTUClient implements Client/Master side logic for RTU over a SerialContext to
+//be used by a ProtocalHandler
 type RTUClient struct {
 	com                  SerialContext
-	SlaveId              byte
+	SlaveID              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
 }
 
-func NewRTUCLient(com SerialContext, slaveId byte) *RTUClient {
+//RTUClient is a Server
+var _ Server = &RTUClient{}
+
+//NewRTUCLient create a new client communicating over SerialContext with the
+//give slaveID as default.
+func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 	r := RTUClient{
 		com:                  com,
-		SlaveId:              slaveId,
+		SlaveID:              slaveID,
 		serverProcessingTime: time.Second,
 		actions:              make(chan rtuAction),
 	}
 	return &r
 }
 
+//SetServerProcessingTime sets the time to wait for a server response, the total
+//wait time also includes the time needed for data transmission
 func (c *RTUClient) SetServerProcessingTime(t time.Duration) {
 	c.serverProcessingTime = t
 }
 
+//GetTransactionTimeOut returns the total time to wait for a transaction
+//(server response) to time out, given the expected length of RTU packets.
+//This function is also used internally to calculate timeout.
 func (c *RTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
 	l := reqLen + ansLen
 	return c.com.BytesDelay(l) + c.serverProcessingTime
@@ -39,7 +51,8 @@ type rtuAction struct {
 	errChan chan<- error
 }
 
-var ServerTimeOutError = errors.New("server timed out")
+//ErrServerTimeOut is the time out error for StartTransaction
+var ErrServerTimeOut = errors.New("server timed out")
 
 type actionType int
 
@@ -58,8 +71,8 @@ func (a actionType) String() string {
 	return fmt.Sprintf("%v", a)
 }
 
-//Serves RTUClient side handlers, must close transport after error is returned
-//to clean up.
+//Serve serves RTUClient side handlers, must close SerialContext after error is
+//returned, to clean up.
 func (c *RTUClient) Serve(handler ProtocalHandler) error {
 	delay := c.com.MinDelay()
 
@@ -137,7 +150,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		SELECT:
 			select {
 			case <-timeOutChan:
-				sendError(act.errChan, ServerTimeOutError)
+				sendError(act.errChan, ErrServerTimeOut)
 				break READ_LOOP
 			case react, ok := <-c.actions:
 				if !ok {
@@ -185,16 +198,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 	}
 }
 
-func (c *RTUClient) IsClient() bool {
-	return true
-}
-
 //StartTransaction starts a transaction, and returns a channel that returns an error
 //or nil, with the default slaveId.
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *RTUClient) StartTransaction(req PDU) <-chan error {
-	return c.StartTransactionToServer(c.SlaveId, req)
+	return c.StartTransactionToServer(c.SlaveID, req)
 }
 
 //StartTransactionToServer starts a transaction, with a custom slaveId.

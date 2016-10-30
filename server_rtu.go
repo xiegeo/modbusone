@@ -10,21 +10,23 @@ import (
 
 type RTUServer struct {
 	com     SerialContext
-	SlaveId byte
+	SlaveID byte
 }
 
 const MaxRTUSize = 256
 
-func NewRTUServer(com SerialContext, slaveId byte) *RTUServer {
+//NewRTUServer creates a RTU server on SerialContext listening on slaveID
+func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	r := RTUServer{
 		com:     com,
-		SlaveId: slaveId,
+		SlaveID: slaveID,
 	}
 	return &r
 }
 
-//Serve runs the server and only returns after unrecoverable error, such as com is closed.
-//Right now Read is assumed to only read full packets, as per RTU delay based spec.
+//Serve runs the server and only returns after unrecoverable error, such as
+//SerialContext is closed. Read is assumed to only read full packets,
+//as per RTU delay based spec.
 func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	delay := s.com.MinDelay()
 
@@ -58,7 +60,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			debugf("RTUServer drop read packet:%v\n", err)
 			continue
 		}
-		if r[0] != 0 && r[0] != s.SlaveId {
+		if r[0] != 0 && r[0] != s.SlaveID {
 			debugf("RTUServer drop packet to other id:%v\n", r[0])
 			continue
 		}
@@ -96,22 +98,16 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	return ioerr
 }
 
-func (s *RTUServer) IsClient() bool {
-	return false
-}
-
-func (s *RTUServer) StartTransaction(req PDU) error {
-	return errors.New("transactions can only be started from the client side")
-}
-
-func Uint64ToSlaveId(n uint64) (byte, error) {
+//Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
+//See also flag.Uint64 and strcov.ParseUint
+func Uint64ToSlaveID(n uint64) (byte, error) {
 	if n > 247 {
-		return 0, errors.New("slaveId must be less than 248")
+		return 0, errors.New("slaveID must be less than 248")
 	}
 	return byte(n), nil
 }
 
-//where to print debug messages
+//DebugOut sets where to print debug messages
 var DebugOut io.Writer = nil
 
 func debugf(format string, a ...interface{}) {

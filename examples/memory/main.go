@@ -13,7 +13,7 @@ var address = flag.String("l", "", "required device location, such as: /dev/ttyS
 var baudRate = flag.Int("r", 19200, "baud rate")
 
 var isClient = flag.Bool("c", false, "true for client, false (default) for server")
-var slaveId = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
+var slaveID = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
 var fillData = flag.String("d", "am3", "data to start with, am3 starts memory "+
 	"with bools as address (mod 3) == 0, and registers as address * 3 (mod uint16)")
 
@@ -24,7 +24,7 @@ func main() {
 	if *verbose {
 		modbusone.DebugOut = os.Stdout
 	}
-	var com modbusone.SerialPort
+	var com = &modbusone.SerialPort{}
 	err := com.Open(serial.Config{
 		Address:  *address,
 		BaudRate: *baudRate,
@@ -35,9 +35,9 @@ func main() {
 	}
 	defer com.Close()
 
-	id, err := modbusone.Uint64ToSlaveId(*slaveId)
+	id, err := modbusone.Uint64ToSlaveID(*slaveID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "set slaveId error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "set slaveID error: %v\n", err)
 		os.Exit(1)
 	}
 	if *fillData == "am3" {

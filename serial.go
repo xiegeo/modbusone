@@ -8,7 +8,7 @@ import (
 	"github.com/goburrow/serial"
 )
 
-// An interace implemented by SerialPort, can also be mocked for testing.
+//SerialContext is an interace implemented by SerialPort, can also be mocked for testing.
 type SerialContext interface {
 	io.ReadWriteCloser
 	//RTUMinDelay returns the minimum required delay between packets for framing
@@ -17,7 +17,7 @@ type SerialContext interface {
 	BytesDelay(n int) time.Duration
 }
 
-// SerialPort has configuration and I/O controller.
+//SerialPort has configuration and I/O controller.
 type SerialPort struct {
 	// Serial port configuration.
 	serial.Config
@@ -27,6 +27,7 @@ type SerialPort struct {
 	isConnected bool
 }
 
+//Open opens the SerialPort with Config
 func (s *SerialPort) Open(c serial.Config) (err error) {
 	if s.isConnected {
 		return fmt.Errorf("already opened")
@@ -50,6 +51,7 @@ func (s *SerialPort) Write(b []byte) (int, error) {
 	return s.port.Write(b)
 }
 
+//Close closes the SerialPort
 func (s *SerialPort) Close() (err error) {
 	if !s.isConnected {
 		return fmt.Errorf("already closed")
@@ -59,7 +61,7 @@ func (s *SerialPort) Close() (err error) {
 	return
 }
 
-//RTUMinDelay returns the minum Delay of 3.5 chars between packets or 1750 mircos
+//MinDelay returns the minum Delay of 3.5 bytes between packets or 1750 mircos
 func (s *SerialPort) MinDelay() time.Duration {
 	delay := 1750 * time.Microsecond
 	br := time.Duration(s.BaudRate)
@@ -70,7 +72,7 @@ func (s *SerialPort) MinDelay() time.Duration {
 	return delay
 }
 
-//RTUMinDelay returns the time it takes to send chars in baudRate
+//BytesDelay returns the time it takes to send n bytes in baudRate
 func (s *SerialPort) BytesDelay(n int) time.Duration {
 	br := time.Duration(s.BaudRate)
 	cs := time.Duration(n)
