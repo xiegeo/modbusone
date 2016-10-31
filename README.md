@@ -1,16 +1,17 @@
-# ModbusOne
+# ModbusOne [![GoDoc](https://godoc.org/github.com/xiegeo/modbusone?status.svg)](https://godoc.org/github.com/xiegeo/modbusone)
 A modbus library for Go, with unified client and server APIs.
 One implementation to rule them all.
+
+For usage examples, see examples/memory and handler2serial_test.go
 
 ## Why
 
 There exists modbus libraries for Go, such as goburrow/modbus and flosse/go-modbus.
-But they do not include any server APIs. Even if server function is implemented.
-User code will have to be written separately to support running both as client and server.
+But they do not include any server APIs. Even if server function is implemented, user code will have to be written separately to support running both as client and server.
 
 In my use case, client/server should be interchangeable. User code should worry about how to handle the translation of MODBUS data model to application logic. The only difference been the client also initiate requests.
 
-This means that a remote function call like API, which are effective as a client API, is insufficient.
+This means that a remote function call like API, which is effective as a client API, is insufficient.
 
 Instead, a callback based API (think http server handler) is used for both server and client.
 
@@ -18,15 +19,17 @@ Instead, a callback based API (think http server handler) is used for both serve
 
 There is no API stability, this project is in alpha.
 
-My primary usage is RTU (over RS-485).
+My primary usage is RTU (over RS-485). Others may or may not be implemented in the future.
 
 ## Challenges
 
-Working on physical layer protocol in a cross platform application layer means delay as a terminator is harder to work with.
+<strike>Working on physical layer protocol in a cross platform application layer means delay as a terminator is harder to work with.</strike> (the driver is doing this for me)
 
-Compatibility with different existing Modbus implementations.
+Compatibility with different existing Modbus implementations. (needs more testing)
 
-Recover from transmission errors and timeouts, to work continuously unattended.
+Recover from transmission errors and timeouts, to work continuously unattended. (needs more testing)
+
+Fuzze testing against crashes.
 
 ## Definitions
 
