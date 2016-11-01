@@ -46,12 +46,12 @@ func TestHandler(t *testing.T) {
 
 	ch := &SimpleHandler{
 		OnErrorImp: func(req PDU, errRep PDU) {
-			subtest.Errorf("client handler recived error:%x in request:%x", errRep, req)
+			subtest.Errorf("client handler received error:%x in request:%x", errRep, req)
 		},
 	}
 	sh := &SimpleHandler{
 		OnErrorImp: func(req PDU, errRep PDU) {
-			subtest.Errorf("server handler recived error:%x in request:%x", errRep, req)
+			subtest.Errorf("server handler received error:%x in request:%x", errRep, req)
 		},
 	}
 

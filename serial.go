@@ -8,7 +8,7 @@ import (
 	"github.com/goburrow/serial"
 )
 
-//SerialContext is an interace implemented by SerialPort, can also be mocked for testing.
+//SerialContext is an interface implemented by SerialPort, can also be mocked for testing.
 type SerialContext interface {
 	io.ReadWriteCloser
 	//RTUMinDelay returns the minimum required delay between packets for framing

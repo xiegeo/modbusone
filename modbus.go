@@ -60,7 +60,7 @@ func (f FunctionCode) Valid() bool {
 	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
 }
 
-//MaxRange is the largest address in the Modbus protocal.
+//MaxRange is the largest address in the Modbus protocol.
 func (f FunctionCode) MaxRange() uint16 {
 	return 0xFFFF
 }
@@ -82,7 +82,7 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 	return 0 //unsupported functions
 }
 
-//MakeRequestHeader makes a partical pdu without any data, to be used for
+//MakeRequestHeader makes a particular pdu without any data, to be used for
 //client side StartTransaction.
 //The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
 func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
@@ -208,7 +208,7 @@ func (p PDU) ValidateRequest() error {
 	return nil
 }
 
-//GetFunctionCode returns the funciton code
+//GetFunctionCode returns the function code
 func (p PDU) GetFunctionCode() FunctionCode {
 	if len(p) <= 0 {
 		return FunctionCode(0)

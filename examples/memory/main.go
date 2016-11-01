@@ -101,7 +101,7 @@ func main() {
 		},
 
 		OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
-			fmt.Printf("error recived: %v from req:\n", errRep, req)
+			fmt.Printf("error received: %v from req:\n", errRep, req)
 		},
 	}
 	err = device.Serve(&h)

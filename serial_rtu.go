@@ -31,7 +31,7 @@ func (r RTU) GetPDU() (PDU, error) {
 	return p, nil
 }
 
-//GetPDU returns the PDU inside, with no safty checks.
+//GetPDU returns the PDU inside, with no safety checks.
 func (r RTU) fastGetPDU() PDU {
 	return PDU(r[1 : len(r)-2])
 }
