@@ -54,24 +54,25 @@ type crc struct {
 	low  byte
 }
 
+//New returns a new Hash computing the Modbus CRC checksum.
 func New() Hash {
 	var c crc
 	c.Reset()
 	return &c
 }
 
-func (crc *crc) Reset() {
-	crc.high = 0xFF
-	crc.low = 0xFF
+func (c *crc) Reset() {
+	c.high = 0xFF
+	c.low = 0xFF
 }
 
-func (crc *crc) Write(bs []byte) (n int, err error) {
+func (c *crc) Write(bs []byte) (n int, err error) {
 	var idx, b byte
 
 	for _, b = range bs {
-		idx = crc.low ^ b
-		crc.low = crc.high ^ crcHighBytes[idx]
-		crc.high = crcLowBytes[idx]
+		idx = c.low ^ b
+		c.low = c.high ^ crcHighBytes[idx]
+		c.high = crcLowBytes[idx]
 	}
 	return len(bs), nil
 }
@@ -82,11 +83,11 @@ func (c0 *crc) Sum(bs []byte) []byte {
 	return append(bs, c.low, c.high)
 }
 
-func (crc *crc) Sum16() uint16 {
-	return uint16(crc.low)<<8 | uint16(crc.high)
+func (c *crc) Sum16() uint16 {
+	return uint16(c.low)<<8 | uint16(c.high)
 }
 
-// subset of hash.Hash
+//Hash is a subset of hash.Hash
 type Hash interface {
 	// Write (via the embedded io.Writer interface) adds more data to the running hash.
 	// It never returns an error.

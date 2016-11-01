@@ -11,7 +11,7 @@ type RTU []byte
 
 //MakeRTU makes a RTU with slaveID and PDU
 func MakeRTU(slaveID byte, p PDU) RTU {
-	return RTU(crc.Append(append([]byte{slaveID}, p...)))
+	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }
 
 //IsMulticast returns true if slaveID is the multicast address 0

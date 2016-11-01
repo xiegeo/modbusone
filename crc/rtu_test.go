@@ -22,7 +22,7 @@ func TestRTU(t *testing.T) {
 			l := len(tc)
 			b1 := tc[l-2]
 			b2 := tc[l-1]
-			tc = Append(tc[:l-2])
+			tc = Sum(tc[:l-2])
 			if b1 != tc[l-2] || b2 != tc[l-1] {
 				t.Fatalf("crc calucation failed %x %x != %x %x", b1, b2, tc[l-2], tc[l-1])
 			}
