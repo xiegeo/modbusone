@@ -11,18 +11,17 @@ import (
 //RTUServer implements Server/Slave side logic for RTU over a SerialContext to
 //be used by a ProtocalHandler
 type RTUServer struct {
-	com     SerialContext
-	SlaveID byte
+	com          SerialContext
+	packetReader io.Reader
+	SlaveID      byte
 }
-
-//MaxRTUSize is the max possible size of a RTU packet
-const MaxRTUSize = 256
 
 //NewRTUServer creates a RTU server on SerialContext listening on slaveID
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	r := RTUServer{
-		com:     com,
-		SlaveID: slaveID,
+		com:          com,
+		packetReader: NewRTUPacketReader(com, false, StartingSerialBufferSide),
+		SlaveID:      slaveID,
 	}
 	return &r
 }
@@ -51,7 +50,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	for ioerr == nil {
 		var n int
 		debugf("RTUServer wait for read\n")
-		n, ioerr = s.com.Read(rb)
+		n, ioerr = s.packetReader.Read(rb)
 		if ioerr != nil {
 			return ioerr
 		}
@@ -74,7 +73,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			continue
 		}
 		fc := p.GetFunctionCode()
-		if fc.ReadToServer() {
+		if fc.IsReadToServer() {
 			data, err := handler.OnRead(p)
 			if err != nil {
 				debugf("RTUServer handler.OnOutput error:%v\n", err)
@@ -82,7 +81,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 				continue
 			}
 			wp(p.MakeReadReply(data), r[0])
-		} else if fc.WriteToServer() {
+		} else if fc.IsWriteToServer() {
 			data, err := p.GetRequestValues()
 			if err != nil {
 				debugf("RTUServer p.GetRequestValues error:%v\n", err)

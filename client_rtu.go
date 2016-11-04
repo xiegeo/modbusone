@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -11,6 +12,7 @@ import (
 //be used by a ProtocalHandler
 type RTUClient struct {
 	com                  SerialContext
+	packetReader         io.Reader
 	SlaveID              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
@@ -24,6 +26,7 @@ var _ Server = &RTUClient{}
 func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 	r := RTUClient{
 		com:                  com,
+		packetReader:         NewRTUPacketReader(com, true, StartingSerialBufferSide),
 		SlaveID:              slaveID,
 		serverProcessingTime: time.Second,
 		actions:              make(chan rtuAction),
@@ -84,7 +87,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		//unexpected time.
 		rb := make([]byte, MaxRTUSize)
 		for {
-			n, err := c.com.Read(rb)
+			n, err := c.packetReader.Read(rb)
 			if err != nil {
 				readerr = err
 				debugf("RTUClient read err:%v\n", err)
@@ -126,7 +129,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		}
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
-		if afc.WriteToServer() {
+		if afc.IsWriteToServer() {
 			data, err := handler.OnRead(ap)
 			if err != nil {
 				sendError(act.errChan, err)
@@ -170,7 +173,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					sendError(act.errChan, err)
 					break READ_LOOP
 				}
-				hasErr, fc := rp.GetFunctionCode().WithoutError()
+				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
 					handler.OnError(ap, rp)
 					sendError(act.errChan, fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp)))
@@ -180,7 +183,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					sendError(act.errChan, fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp)))
 					break READ_LOOP
 				}
-				if !afc.WriteToServer() {
+				if !afc.IsWriteToServer() {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {

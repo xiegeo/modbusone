@@ -93,7 +93,7 @@ func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
 		return nil, fmt.Errorf("%v + %v out of range %v", address, count-1, f.MaxRange())
 	}
 	header := []byte{byte(f), byte(address >> 8), byte(address)}
-	if f.MaxPerPacket() == 1 {
+	if f.IsSingle() {
 		return PDU(header), nil
 	}
 	header = append(header, byte(count>>8), byte(count))
@@ -106,9 +106,36 @@ func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
 	return PDU(header), nil
 }
 
+//IsUint16 returns true if the FunctionCode concerns 16bit values
+func (f FunctionCode) IsUint16() bool {
+	switch f {
+	case 3, 4, 6, 16:
+		return true
+	}
+	return false
+}
+
+//IsUint16 returns true if the FunctionCode concerns boolean values
+func (f FunctionCode) IsBool() bool {
+	switch f {
+	case 1, 2, 5, 15:
+		return true
+	}
+	return false
+}
+
+//IsUint16 returns true if the FunctionCode can transmit many values
+func (f FunctionCode) IsSingle() bool {
+	switch f {
+	case 5, 6:
+		return true
+	}
+	return false
+}
+
 //WriteToServer returns true if the FunctionCode is a write.
 //FunctionCode 23 is both a read and write.
-func (f FunctionCode) WriteToServer() bool {
+func (f FunctionCode) IsWriteToServer() bool {
 	switch f {
 	case 5, 6, 15, 16, 22, 23:
 		return true
@@ -118,7 +145,7 @@ func (f FunctionCode) WriteToServer() bool {
 
 //ReadToServer returns true if the FunctionCode is a write.
 //FunctionCode 23 is both a read and write.
-func (f FunctionCode) ReadToServer() bool {
+func (f FunctionCode) IsReadToServer() bool {
 	switch f {
 	case 1, 2, 3, 4, 23:
 		return true
@@ -126,9 +153,9 @@ func (f FunctionCode) ReadToServer() bool {
 	return false
 }
 
-//WithoutError test if FunctionCode is an error response, and also return the version
+//SeparateError test if FunctionCode is an error response, and also return the version
 //without error flag set
-func (f FunctionCode) WithoutError() (bool, FunctionCode) {
+func (f FunctionCode) SeparateError() (bool, FunctionCode) {
 	return f > 0x7f, f & 0x7f
 }
 
@@ -223,22 +250,21 @@ func (p PDU) GetAddress() uint16 {
 }
 
 //GetRequestCount returns the number of values requested,
-//If PDU is invalid, behavior is undefined (can panic).
+//If PDU is invalid (too short), behavior is undefined (can panic).
 func (p PDU) GetRequestCount() uint16 {
-	max := p.GetFunctionCode().MaxPerPacket()
-	if max < 2 {
-		return max
+	if p.GetFunctionCode().IsSingle() {
+		return 1
 	}
 	return uint16(p[3])<<8 | uint16(p[4])
 }
 
 //GetRequestValues returns the values in a write request
 func (p PDU) GetRequestValues() ([]byte, error) {
-	max := p.GetFunctionCode().MaxPerPacket()
-	if max == 0 {
+	f := p.GetFunctionCode()
+	if f == 0 {
 		return nil, EcIllegalFunction
 	}
-	if max == 1 {
+	if f.IsSingle() {
 		if len(p) != 5 {
 			debugf("fc %v got %v pdu bytes, expected 5", p.GetFunctionCode(), len(p))
 			return nil, EcIllegalDataValue
@@ -260,7 +286,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		debugf("address out of range")
 		return nil, EcIllegalDataAddress
 	}
-	if max <= 125 {
+	if f.IsUint16() {
 		//16 bits registers
 		if lb != l*2 {
 			debugf("%v registers does not fit in %v bytes", l, lb)

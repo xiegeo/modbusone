@@ -21,7 +21,7 @@ type SerialContext interface {
 type SerialPort struct {
 	// Serial port configuration.
 	serial.Config
-	// port is platform-dependent data structure for serial port.
+	// port is a platform-dependent data structure for serial port.
 	port serial.Port
 
 	isConnected bool
@@ -52,13 +52,9 @@ func (s *SerialPort) Write(b []byte) (int, error) {
 }
 
 //Close closes the SerialPort
-func (s *SerialPort) Close() (err error) {
-	if !s.isConnected {
-		return fmt.Errorf("already closed")
-	}
-	err = s.port.Close()
+func (s *SerialPort) Close() error {
 	s.isConnected = false
-	return
+	return s.port.Close()
 }
 
 //MinDelay returns the minum Delay of 3.5 bytes between packets or 1750 mircos

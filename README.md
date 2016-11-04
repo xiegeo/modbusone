@@ -23,7 +23,11 @@ My primary usage is RTU (over RS-485). Others may or may not be implemented in t
 
 ## Challenges
 
-<strike>Working on physical layer protocol in a cross platform application layer means delay as a terminator is harder to work with.</strike> (the driver is doing this for me)
+<strike>Working on physical layer protocol in a cross platform application layer means delay as a terminator is harder to work with.</strike> 
+<strike>The driver is doing this for me.</strike>
+Unless the data is bigger than the build in buffer size. Right now a hybrid approch
+is used: if read is not full buffer size, then end packet; if full buffer size,
+then read data for the expected length by function code and encoded length.
 
 Compatibility with different existing Modbus implementations. (needs more testing)
 

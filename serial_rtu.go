@@ -6,6 +6,14 @@ import (
 	"github.com/xiegeo/modbusone/crc"
 )
 
+//MaxRTUSize is the max possible size of a RTU packet
+const MaxRTUSize = 256
+
+const smallestRTUSize = 4
+
+//StartingSerialBufferSide is the default buffer size to pass to NewRTUPacketReader
+var StartingSerialBufferSide = 32
+
 //RTU is the Modbus RTU Application Data Unit
 type RTU []byte
 

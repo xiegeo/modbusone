@@ -70,8 +70,18 @@ func TestHandler(t *testing.T) {
 		if !bytes.Equal(sc.LastWritten, res) {
 			t.Fatal("response is not as expected")
 		}
-		sh.ReadCoils = nil
-		ch.WriteCoils = nil
+
+		//just test GetPDUSizeFromHeader here too
+		n := GetRTUSizeFromHeader(req, true)
+		if n != len(req) {
+			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for req %x", n, len(req), req)
+		}
+		n = GetRTUSizeFromHeader(res, false)
+		if n != len(res) {
+			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for res %x", n, len(res), req)
+		}
+
+		//make sure LastWritten does not pollute other tests
 		cc.LastWritten = nil
 		sc.LastWritten = nil
 	}
