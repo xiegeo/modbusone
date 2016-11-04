@@ -115,7 +115,7 @@ func (f FunctionCode) IsUint16() bool {
 	return false
 }
 
-//IsUint16 returns true if the FunctionCode concerns boolean values
+//IsBool returns true if the FunctionCode concerns boolean values
 func (f FunctionCode) IsBool() bool {
 	switch f {
 	case 1, 2, 5, 15:
@@ -124,7 +124,7 @@ func (f FunctionCode) IsBool() bool {
 	return false
 }
 
-//IsUint16 returns true if the FunctionCode can transmit many values
+//IsSingle returns true if the FunctionCode can transmit only one value
 func (f FunctionCode) IsSingle() bool {
 	switch f {
 	case 5, 6:
@@ -133,7 +133,7 @@ func (f FunctionCode) IsSingle() bool {
 	return false
 }
 
-//WriteToServer returns true if the FunctionCode is a write.
+//IsWriteToServer returns true if the FunctionCode is a write.
 //FunctionCode 23 is both a read and write.
 func (f FunctionCode) IsWriteToServer() bool {
 	switch f {
@@ -143,7 +143,7 @@ func (f FunctionCode) IsWriteToServer() bool {
 	return false
 }
 
-//ReadToServer returns true if the FunctionCode is a write.
+//IsReadToServer returns true if the FunctionCode is a write.
 //FunctionCode 23 is both a read and write.
 func (f FunctionCode) IsReadToServer() bool {
 	switch f {

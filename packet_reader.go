@@ -75,9 +75,9 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 			return 6
 		}
 		return 6 + int(header[5])
-	} else {
-		return 2 + int(header[1])
 	}
+	//server reply to a read
+	return 2 + int(header[1])
 }
 
 //GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given
