@@ -29,6 +29,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 	read := 0
 	for read < expected {
 		n, err := s.r.Read(p[read:])
+		debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v, bufferSize %v", read, n, len(p), err, expected, s.bufferSize)
 		read += n
 		if err != nil || read == len(p) {
 			return read, err
@@ -50,12 +51,14 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		}
 		//lets see if there is more to read
 		expected = GetRTUSizeFromHeader(p, s.isClient)
+		debugf("RTUPacketReader new expected size %v", expected)
 	}
 	return read, nil
 }
 
 //GetPDUSizeFromHeader returns the expected sized of a pdu packet with the given
 //PDU header, if not enough info is in the header, then it returns the shortest possible.
+//isClient is true if a client/master is reading the packet.
 func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 2 {
 		return 2
@@ -64,24 +67,29 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if ec || !f.Valid() {
 		return 2
 	}
-	if isClient == f.IsReadToServer() {
+	if isClient == f.IsWriteToServer() {
+		//all packets without data: fc, address, and count
 		return 5
 	}
 	if isClient {
-		if f.IsSingle() {
-			return 5
-		}
-		if len(header) < 6 {
-			return 6
-		}
-		return 6 + int(header[5])
+		//all data replies: fc, data bytes, data
+		return 2 + int(header[1])
 	}
-	//server reply to a read
-	return 2 + int(header[1])
+	if f.IsSingle() {
+		//fc, address, one data
+		return 5
+	}
+	//fc, adress, count, data bytes, data
+	if len(header) < 6 {
+		return 6
+	}
+	return 6 + int(header[5])
+
 }
 
 //GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given
 //RTU header, if not enough info is in the header, then it returns the shortest possible.
+//isClient is true if a client/master is reading the packet.
 func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 3 {
 		return 3

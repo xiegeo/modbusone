@@ -72,11 +72,11 @@ func TestHandler(t *testing.T) {
 		}
 
 		//just test GetPDUSizeFromHeader here too
-		n := GetRTUSizeFromHeader(req, true)
+		n := GetRTUSizeFromHeader(req, false)
 		if n != len(req) {
 			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for req %x", n, len(req), req)
 		}
-		n = GetRTUSizeFromHeader(res, false)
+		n = GetRTUSizeFromHeader(res, true)
 		if n != len(res) {
 			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for res %x", n, len(res), req)
 		}
