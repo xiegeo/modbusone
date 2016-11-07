@@ -12,7 +12,7 @@ import (
 var address = flag.String("l", "", "required device location, such as: /dev/ttyS0 in linux or com1 in windows")
 var baudRate = flag.Int("r", 19200, "baud rate")
 
-var isClient = flag.Bool("c", false, "true for client, false (default) for server")
+var isClient = flag.Bool("c", false, "true for client, false (default) for server. The client is interactive.")
 var slaveID = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
 var fillData = flag.String("d", "am3", "data to start with, am3 starts memory "+
 	"with bools as address (mod 3) == 0, and registers as address * 3 (mod uint16)")
@@ -46,7 +46,7 @@ func main() {
 	var device modbusone.Server
 	if *isClient {
 		client := modbusone.NewRTUCLient(com, id)
-		//do client.StartTransaction(req PDU) in a loop in a go routine here
+		go runClient(client)
 		device = client
 	} else {
 		device = modbusone.NewRTUServer(com, id)
