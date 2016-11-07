@@ -49,29 +49,33 @@ func (c *RTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
 }
 
 type rtuAction struct {
-	t       actionType
+	t       clientActionType
 	data    RTU
+	err     error
 	errChan chan<- error
 }
 
 //ErrServerTimeOut is the time out error for StartTransaction
 var ErrServerTimeOut = errors.New("server timed out")
 
-type actionType int
+type clientActionType int
 
 const (
-	start actionType = 1
-	read  actionType = 2
+	clientStart clientActionType = iota
+	clientRead
+	clientError
 )
 
-func (a actionType) String() string {
+func (a clientActionType) String() string {
 	switch a {
-	case start:
+	case clientStart:
 		return "start"
-	case read:
+	case clientRead:
 		return "read"
+	case clientError:
+		return "error"
 	}
-	return fmt.Sprintf("actionType %d", a)
+	return fmt.Sprintf("clientActionType %d", a)
 }
 
 //Serve serves RTUClient side handlers, must close SerialContext after error is
@@ -79,8 +83,6 @@ func (a actionType) String() string {
 func (c *RTUClient) Serve(handler ProtocalHandler) error {
 	delay := c.com.MinDelay()
 
-	var ioerr error //irrecoverable io errors
-	var readerr error
 	go func() {
 		//Reader loop that always ready to received data. This make sure that read
 		//data is always new(ish), to dump data out that is received during an
@@ -89,59 +91,42 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		for {
 			n, err := c.packetReader.Read(rb)
 			if err != nil {
-				readerr = err
 				debugf("RTUClient read err:%v\n", err)
+				c.actions <- rtuAction{t: clientRead, err: err}
+				break
 			}
 			r := RTU(rb[:n])
 			debugf("RTUClient read packet:%v\n", hex.EncodeToString(r))
-			c.actions <- rtuAction{read, r, nil}
+			c.actions <- rtuAction{t: clientRead, data: r}
 		}
 	}()
 
-	hasError := func() bool {
-		return ioerr != nil || readerr != nil
-	}
-	getError := func() error {
-		if ioerr != nil {
-			return ioerr
-		}
-		return readerr
-	}
-	sendError := func(ec chan<- error, err error) error {
-		if ec != nil {
-			ec <- err
-		}
-		return err
-	}
-	sendGetError := func(ec chan<- error) error {
-		return sendError(ec, getError())
-	}
-
 	for {
-		act, ok := <-c.actions
-		if !ok {
-			debugf("RTUClient actions closed\n")
-			return getError()
-		}
-		if act.t != start {
-			debugf("RTUClient drop unexpected action:%s\n", act.t)
+		act := <-c.actions
+		switch act.t {
+		default:
+			debugf("RTUClient drop unexpected: %v", act)
 			continue
+		case clientError:
+			return act.err
+		case clientStart:
 		}
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
 		if afc.IsWriteToServer() {
 			data, err := handler.OnRead(ap)
 			if err != nil {
-				sendError(act.errChan, err)
+				act.errChan <- err
 				continue
 			}
 			act.data = MakeRTU(act.data[0], ap.MakeWriteRequest(data))
 			ap = act.data.fastGetPDU()
 		}
 		time.Sleep(delay)
-		_, ioerr = c.com.Write(act.data)
-		if hasError() {
-			return sendGetError(act.errChan)
+		_, err := c.com.Write(act.data)
+		if err != nil {
+			act.errChan <- err
+			return err
 		}
 		if act.data[0] == 0 {
 			continue // do not wait for read on multicast
@@ -153,16 +138,17 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		SELECT:
 			select {
 			case <-timeOutChan:
-				sendError(act.errChan, ErrServerTimeOut)
+				act.errChan <- ErrServerTimeOut
 				break READ_LOOP
-			case react, ok := <-c.actions:
-				if !ok {
-					debugf("RTUClient actions closed\n")
-					return sendGetError(act.errChan)
-				}
-				if react.t != read {
-					ioerr = fmt.Errorf("unexpected action:%s", react.t)
-					return sendGetError(act.errChan)
+			case react := <-c.actions:
+				switch react.t {
+				default:
+					err := fmt.Errorf("unexpected action:%s", react.t)
+					act.errChan <- err
+					return err
+				case clientError:
+					return act.err
+				case clientRead:
 				}
 				if react.data[0] != act.data[0] {
 					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
@@ -170,31 +156,31 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
-					sendError(act.errChan, err)
+					act.errChan <- err
 					break READ_LOOP
 				}
 				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
 					handler.OnError(ap, rp)
-					sendError(act.errChan, fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp)))
+					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
 				if !MatchPDU(act.data.fastGetPDU(), rp) {
-					sendError(act.errChan, fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp)))
+					act.errChan <- fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
 				if !afc.IsWriteToServer() {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {
-						sendError(act.errChan, err)
+						act.errChan <- err
 						break READ_LOOP
 					}
 					err = handler.OnWrite(ap, bs)
-					sendError(act.errChan, err)
+					act.errChan <- err //success if nill
 					break READ_LOOP
 				}
-				sendError(act.errChan, nil)
+				act.errChan <- nil //success
 				break READ_LOOP
 			}
 		}
@@ -223,7 +209,7 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *RTUClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
-	c.actions <- rtuAction{start, MakeRTU(slaveID, req), errChan}
+	c.actions <- rtuAction{t: clientStart, data: MakeRTU(slaveID, req), errChan: errChan}
 }
 
 //RTUTransactionStarter is an interface implemented by RTUClient.
