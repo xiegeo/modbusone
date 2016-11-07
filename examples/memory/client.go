@@ -20,6 +20,7 @@ func runClient(c *modbusone.RTUClient) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		line, err := reader.ReadString('\n')
+		line = strings.Trim(line, " \r\n")
 		if err != nil {
 			println(err)
 			continue
