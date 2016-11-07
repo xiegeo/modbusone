@@ -264,6 +264,7 @@ func MakePDURequestHeaders(fc FunctionCode, address uint16, quantity uint16, app
 			return nil, err
 		}
 		appendTO = append(appendTO, pdu)
+		address += q
 		quantity -= q
 	}
 	return appendTO, nil
