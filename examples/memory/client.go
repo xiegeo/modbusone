@@ -52,7 +52,7 @@ func parseRequest(ts []string) (fc modbusone.FunctionCode, address, quantity uin
 		err = fmt.Errorf("function code required")
 		return
 	}
-	n, err = strconv.ParseUint(ts[0], 10, 1)
+	n, err = strconv.ParseUint(ts[0], 10, 7)
 	if err != nil {
 		err = fmt.Errorf("function code %v parse error: %v", ts[0], err)
 		return
@@ -62,7 +62,7 @@ func parseRequest(ts []string) (fc modbusone.FunctionCode, address, quantity uin
 	if len(ts) < 2 {
 		return
 	}
-	n, err = strconv.ParseUint(ts[1], 10, 2)
+	n, err = strconv.ParseUint(ts[1], 10, 16)
 	if err != nil {
 		err = fmt.Errorf("address %v parse error: %v", ts[1], err)
 		return
@@ -72,7 +72,7 @@ func parseRequest(ts []string) (fc modbusone.FunctionCode, address, quantity uin
 	if len(ts) < 3 {
 		return
 	}
-	n, err = strconv.ParseUint(ts[2], 10, 2)
+	n, err = strconv.ParseUint(ts[2], 10, 16)
 	if err != nil {
 		err = fmt.Errorf("quantity %v parse error: %v", ts[2], err)
 		return
