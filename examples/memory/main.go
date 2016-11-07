@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/goburrow/serial"
 	"github.com/xiegeo/modbusone"
@@ -28,6 +29,7 @@ func main() {
 	err := com.Open(serial.Config{
 		Address:  *address,
 		BaudRate: *baudRate,
+		Timeout:  time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "open serial error: %v\n", err)
