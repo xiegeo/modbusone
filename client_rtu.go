@@ -201,17 +201,70 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 	}
 }
 
-//StartTransaction starts a transaction, and returns a channel that returns an error
+//DoTransaction starts a transaction, and returns a channel that returns an error
 //or nil, with the default slaveID.
+//
+//DoTransaction is blocking.
+//
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
-func (c *RTUClient) StartTransaction(req PDU) <-chan error {
-	return c.StartTransactionToServer(c.SlaveID, req)
+func (c *RTUClient) DoTransaction(req PDU) error {
+	errChan := make(chan error)
+	c.StartTransactionToServer(c.SlaveID, req, errChan)
+	return <-errChan
 }
 
 //StartTransactionToServer starts a transaction, with a custom slaveID.
-func (c *RTUClient) StartTransactionToServer(slaveID byte, req PDU) <-chan error {
-	errChan := make(chan error)
+//errChan is required and usable, an error is set is the transaction failed, or
+//nil for success.
+//
+//StartTransactionToServer is not blocking.
+//
+//For read from server, the PDU is sent as is (after been warped up in RTU)
+//For write to server, the data part given will be ignored, and filled in by data from handler.
+func (c *RTUClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
 	c.actions <- rtuAction{start, MakeRTU(slaveID, req), errChan}
-	return errChan
+}
+
+//RTUTransactionStarter is an interface implemented by RTUClient.
+type RTUTransactionStarter interface {
+	StartTransactionToServer(slaveID byte, req PDU, errChan chan error)
+}
+
+//DoTransactions runs the reqs transactions in order.
+//If any error is encountered, it returns early and reports the index number and
+//error message
+func DoTransactions(c RTUTransactionStarter, slaveID byte, reqs []PDU) (int, error) {
+	errChan := make(chan error)
+	for i, r := range reqs {
+		c.StartTransactionToServer(slaveID, r, errChan)
+		err := <-errChan
+		if err != nil {
+			return i, err
+		}
+	}
+	return len(reqs), nil
+}
+
+//MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
+//into allowed sizes.
+//Returns an error if quantitiy is out of range.
+func MakePDURequestHeaders(fc FunctionCode, address uint16, quantity uint16, appendTO []PDU) ([]PDU, error) {
+	if uint(address)+uint(quantity) > uint(fc.MaxRange()) {
+		return nil, fmt.Errorf("quantitiy is out of range")
+	}
+	r := fc.MaxPerPacket()
+	q := r
+	for quantity > 0 {
+		if quantity < r {
+			q = quantity
+		}
+		pdu, err := fc.MakeRequestHeader(address, q)
+		if err != nil {
+			return nil, err
+		}
+		appendTO = append(appendTO, pdu)
+		quantity -= q
+	}
+	return appendTO, nil
 }

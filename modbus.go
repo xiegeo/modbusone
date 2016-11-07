@@ -85,23 +85,23 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 //MakeRequestHeader makes a particular pdu without any data, to be used for
 //client side StartTransaction.
 //The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
-func (f FunctionCode) MakeRequestHeader(address, count uint16) (PDU, error) {
-	if count > f.MaxPerPacket() {
-		return nil, fmt.Errorf("%v can not pack %v at once", f, count)
+func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error) {
+	if quantity > f.MaxPerPacket() {
+		return nil, fmt.Errorf("%v can not pack %v at once", f, quantity)
 	}
-	if uint32(address)+uint32(count) > uint32(f.MaxRange()) {
-		return nil, fmt.Errorf("%v + %v out of range %v", address, count-1, f.MaxRange())
+	if uint32(address)+uint32(quantity) > uint32(f.MaxRange()) {
+		return nil, fmt.Errorf("%v + %v out of range %v", address, quantity-1, f.MaxRange())
 	}
 	header := []byte{byte(f), byte(address >> 8), byte(address)}
 	if f.IsSingle() {
 		return PDU(header), nil
 	}
-	header = append(header, byte(count>>8), byte(count))
+	header = append(header, byte(quantity>>8), byte(quantity))
 	if f == FcWriteMultipleCoils {
-		return PDU(append(header, byte((count+7)/8))), nil
+		return PDU(append(header, byte((quantity+7)/8))), nil
 	}
 	if f == FcWriteMultipleRegisters {
-		return PDU(append(header, byte(count*2))), nil
+		return PDU(append(header, byte(quantity*2))), nil
 	}
 	return PDU(header), nil
 }

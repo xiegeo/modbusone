@@ -60,7 +60,7 @@ func TestHandler(t *testing.T) {
 
 	testTrans := func(header PDU, req, res RTU) {
 		t := subtest
-		err := <-client.StartTransaction(header)
+		err := client.DoTransaction(header)
 		if err != nil {
 			t.Error(err)
 		}
