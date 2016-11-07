@@ -82,6 +82,50 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 	return 0 //unsupported functions
 }
 
+//MaxPerPacketSized returns the max number of values a FunctionCode can carry,
+//if we are to further limit PDU packet size.
+//At least 1 (8 for bools) is returned if size is too small.
+func (f FunctionCode) MaxPerPacketSized(size uint8) uint16 {
+	if size > MaxPDUSize {
+		size = MaxPDUSize
+	}
+	s := uint16(size)
+	switch f {
+	case FcReadCoils, FcReadDiscreteInputs:
+		if s < 4 {
+			return 8
+		}
+		if s == MaxPDUSize {
+			//one byte is not used even at max
+			s--
+		}
+		q := (s - 2) * 8
+		return q
+	case FcReadHoldingRegisters, FcReadInputRegisters:
+		if s < 6 {
+			return 1
+		}
+		return (s - 2) / 2
+	case FcWriteSingleCoil, FcWriteSingleRegister:
+		return 1
+	case FcWriteMultipleCoils:
+		if s < 8 {
+			return 8
+		}
+		if s == MaxPDUSize {
+			s--
+		}
+		q := (s - 6) * 8
+		return q
+	case FcWriteMultipleRegisters:
+		if s < 10 {
+			return 1
+		}
+		return (s - 6) / 2
+	}
+	return 0 //unsupported functions
+}
+
 //MakeRequestHeader makes a particular pdu without any data, to be used for
 //client side StartTransaction.
 //The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()

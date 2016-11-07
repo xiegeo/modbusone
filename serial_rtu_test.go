@@ -65,3 +65,15 @@ func TestRTUDelay(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxPerPacketSized(t *testing.T) {
+	for fc := FunctionCode(1); fc < 0x10; fc++ {
+		t.Run(fmt.Sprintf("fc:%v", fc), func(t *testing.T) {
+			r := fc.MaxPerPacket()
+			s := fc.MaxPerPacketSized(MaxPDUSize)
+			if r != s {
+				t.Fatalf("expected:%v got:%v", r, s)
+			}
+		})
+	}
+}

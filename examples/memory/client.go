@@ -31,7 +31,13 @@ func runClient(c *modbusone.RTUClient) {
 			println(err)
 			continue
 		}
-		reqs, err := modbusone.MakePDURequestHeaders(fc, a, q, nil)
+		var limit uint16
+		if fc.IsWriteToServer() {
+			limit = fc.MaxPerPacketSized(uint8(*writeSizeLimit))
+		} else {
+			limit = fc.MaxPerPacketSized(uint8(*readSizeLimit))
+		}
+		reqs, err := modbusone.MakePDURequestHeadersSized(fc, a, q, limit, nil)
 		if err != nil {
 			println(err)
 			continue

@@ -249,14 +249,22 @@ func DoTransactions(c RTUTransactionStarter, slaveID byte, reqs []PDU) (int, err
 //MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
 //into allowed sizes.
 //Returns an error if quantitiy is out of range.
-func MakePDURequestHeaders(fc FunctionCode, address uint16, quantity uint16, appendTO []PDU) ([]PDU, error) {
+func MakePDURequestHeaders(fc FunctionCode, address, quantity uint16, appendTO []PDU) ([]PDU, error) {
+	return MakePDURequestHeadersSized(fc, address, quantity, fc.MaxPerPacket(), appendTO)
+}
+
+//MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
+//into sizes of maxPerPacket or less.
+//Returns an error if quantitiy is out of range.
+//
+//You can use FunctionCode.MaxPerPacketSized to calculate one with the wanted byte length.
+func MakePDURequestHeadersSized(fc FunctionCode, address, quantity uint16, maxPerPacket uint16, appendTO []PDU) ([]PDU, error) {
 	if uint(address)+uint(quantity) > uint(fc.MaxRange()) {
 		return nil, fmt.Errorf("quantitiy is out of range")
 	}
-	r := fc.MaxPerPacket()
-	q := r
+	q := maxPerPacket
 	for quantity > 0 {
-		if quantity < r {
+		if quantity < maxPerPacket {
 			q = quantity
 		}
 		pdu, err := fc.MakeRequestHeader(address, q)

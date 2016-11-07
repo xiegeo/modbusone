@@ -18,6 +18,9 @@ var slaveID = flag.Uint64("id", 1, "the slaveId of the server for serial communi
 var fillData = flag.String("d", "am3", "data to start with, am3 starts memory "+
 	"with bools as address (mod 3) == 0, and registers as address * 3 (mod uint16)")
 
+var writeSizeLimit = flag.Uint64("wsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a write to server to send")
+var readSizeLimit = flag.Uint64("rsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a read from server to request")
+
 var verbose = flag.Bool("v", false, "prints debugging information")
 
 func main() {
@@ -47,6 +50,10 @@ func main() {
 	}
 	var device modbusone.Server
 	if *isClient {
+		if *writeSizeLimit > modbusone.MaxRTUSize || *readSizeLimit > modbusone.MaxRTUSize {
+			fmt.Fprintf(os.Stderr, "write/read size limit is too big")
+			os.Exit(1)
+		}
 		client := modbusone.NewRTUCLient(com, id)
 		go runClient(client)
 		device = client

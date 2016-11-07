@@ -9,6 +9,9 @@ import (
 //MaxRTUSize is the max possible size of a RTU packet
 const MaxRTUSize = 256
 
+//MaxRTUSize is the max possible size of a PDU packet
+const MaxPDUSize = 253
+
 const smallestRTUSize = 4
 
 //StartingSerialBufferSide is the default buffer size to pass to NewRTUPacketReader
