@@ -43,8 +43,14 @@ func (s *SerialPort) Open(c serial.Config) (err error) {
 	return
 }
 
+//Read reads the serial port and removes the timeout error
 func (s *SerialPort) Read(b []byte) (int, error) {
-	return s.port.Read(b)
+	n, err := s.port.Read(b)
+	if err == serial.ErrTimeout {
+		debugf("serial read timeout")
+		return n, nil
+	}
+	return n, err
 }
 func (s *SerialPort) Write(b []byte) (int, error) {
 	debugf("SerialPort Write:%x\n", b)
