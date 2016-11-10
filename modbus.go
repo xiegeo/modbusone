@@ -85,9 +85,12 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 //MaxPerPacketSized returns the max number of values a FunctionCode can carry,
 //if we are to further limit PDU packet size.
 //At least 1 (8 for bools) is returned if size is too small.
-func (f FunctionCode) MaxPerPacketSized(size uint8) uint16 {
+func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 	if size > MaxPDUSize {
 		size = MaxPDUSize
+	}
+	if size < 10 {
+		debugf("warning: PDU packet size is only %v", size)
 	}
 	s := uint16(size)
 	switch f {
