@@ -10,6 +10,8 @@ import (
 	"github.com/xiegeo/modbusone"
 )
 
+var _ = time.Second
+
 var address = flag.String("l", "", "required device location, such as: /dev/ttyS0 in linux or com1 in windows")
 var baudRate = flag.Int("r", 19200, "baud rate")
 
