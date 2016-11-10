@@ -33,15 +33,17 @@ func runClient(c *modbusone.RTUClient) {
 		}
 		var limit uint16
 		if fc.IsWriteToServer() {
-			limit = fc.MaxPerPacketSized(uint8(*writeSizeLimit))
+			limit = fc.MaxPerPacketSized((*writeSizeLimit) - 3)
 		} else {
-			limit = fc.MaxPerPacketSized(uint8(*readSizeLimit))
+			limit = fc.MaxPerPacketSized((*readSizeLimit) - 3)
 		}
+		println("limit", limit)
 		reqs, err := modbusone.MakePDURequestHeadersSized(fc, a, q, limit, nil)
 		if err != nil {
 			println(err)
 			continue
 		}
+		println("doing ", fc, a, q, "in", len(reqs), "requests")
 		n, err := modbusone.DoTransactions(c, c.SlaveID, reqs)
 		if err != nil {
 			println(err, "in request", n+1, "/", len(reqs), reqs[n])
