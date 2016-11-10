@@ -14,6 +14,8 @@ var _ = time.Second
 
 var address = flag.String("l", "", "required device location, such as: /dev/ttyS0 in linux or com1 in windows")
 var baudRate = flag.Int("r", 19200, "baud rate")
+var parity = flag.String("p", "E", "parity: N - None, E - Even, O - Odd")
+var stopBits = flag.Int("s", 1, "stop bits: 1 or 2")
 
 var isClient = flag.Bool("c", false, "true for client, false (default) for server. The client is interactive.")
 var slaveID = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
@@ -34,7 +36,10 @@ func main() {
 	err := com.Open(serial.Config{
 		Address:  *address,
 		BaudRate: *baudRate,
-		Timeout:  time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
+		Parity:   *parity,
+		StopBits: *stopBits,
+
+		Timeout: time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "open serial error: %v\n", err)
