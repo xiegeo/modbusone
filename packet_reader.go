@@ -35,7 +35,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			return read, err
 		}
 		if n > s.bufferSize {
-			debugf("calibrating rtuPacketReader bufferSize to %v", n)
+			debugf("recalibrating rtuPacketReader bufferSize to %v", n)
 			s.bufferSize = n
 		}
 		if read > 0 && n < s.bufferSize {
