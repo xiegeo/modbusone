@@ -38,13 +38,11 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			debugf("calibrating rtuPacketReader bufferSize to %v", n)
 			s.bufferSize = n
 		}
-		if n < s.bufferSize {
-			//buffer is not filled, reader must have detected time based message
-			//termination.
+		if read > 0 && n < s.bufferSize {
+			//some data is read, but buffer is not filled,
+			//reader must have detected time based message termination.
 			return read, nil
 		}
-		//Now I have a full buffer read, so I need other ways to detect message
-		//termination
 		if read < expected {
 			//lets read more
 			continue
