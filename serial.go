@@ -50,6 +50,10 @@ func (s *SerialPort) Read(b []byte) (int, error) {
 		debugf("serial read timeout")
 		return n, nil
 	}
+	if n == 0&err == nil {
+		debugf("serial read nil")
+		return n, fmt.Errorf("serial read nil")
+	}
 	return n, err
 }
 func (s *SerialPort) Write(b []byte) (int, error) {
