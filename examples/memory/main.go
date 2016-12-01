@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/goburrow/serial"
+	"github.com/tarm/serial"
 	"github.com/xiegeo/modbusone"
 )
 
@@ -32,19 +32,32 @@ func main() {
 	if *verbose {
 		modbusone.DebugOut = os.Stdout
 	}
-	var com = &modbusone.SerialPort{}
-	err := com.Open(serial.Config{
-		Address:  *address,
-		BaudRate: *baudRate,
-		Parity:   *parity,
-		StopBits: *stopBits,
+	/*
+		//old github.com/goburrow/serial version
+		var com = &modbusone.SerialPort{}
+		err := com.Open(serial.Config{
+			Address:  *address,
+			BaudRate: *baudRate,
+			Parity:   *parity,
+			StopBits: *stopBits,
 
-		Timeout: time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
-	})
+			//Timeout: time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
+		})
+	*/
+	config := serial.Config{
+		Name:     *address,
+		Baud:     *baudRate,
+		StopBits: serial.StopBits(*stopBits),
+	}
+	if len(*parity) > 1 {
+		config.Parity = []serial.Parity(*parity)[0]
+	}
+	s, err := serial.OpenPort(&config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "open serial error: %v\n", err)
 		os.Exit(1)
 	}
+	com := modbusone.NewSerialContext(s, int64(*baudRate))
 	defer com.Close()
 
 	id, err := modbusone.Uint64ToSlaveID(*slaveID)

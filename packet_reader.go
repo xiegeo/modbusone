@@ -2,6 +2,7 @@ package modbusone
 
 import (
 	"io"
+	"runtime"
 )
 
 type rtuPacketReader struct {
@@ -41,7 +42,13 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		if read > 0 && n < s.bufferSize {
 			//some data is read, but buffer is not filled,
 			//reader must have detected time based message termination.
-			return read, nil
+
+			if runtime.GOOS == "windows" && (n == 1 || n == s.bufferSize-1) {
+				//windows Overlapped IO short read work around
+				//a full buffer read might be split into a 1 and a full-1
+			} else {
+				return read, nil
+			}
 		}
 		if read < expected {
 			//lets read more
