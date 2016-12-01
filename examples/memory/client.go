@@ -67,6 +67,10 @@ func parseRequest(ts []string) (fc modbusone.FunctionCode, address, quantity uin
 		return
 	}
 	fc = modbusone.FunctionCode(n)
+	if !fc.Valid() {
+		err = fmt.Errorf("function code %v is not supported", fc)
+		return
+	}
 
 	if len(ts) < 2 {
 		return
