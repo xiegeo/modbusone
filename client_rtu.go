@@ -147,8 +147,12 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					act.errChan <- err
 					return err
 				case clientError:
-					return act.err
+					return react.err
 				case clientRead:
+					//test for read error
+					if react.err != nil {
+						return react.err
+					}
 				}
 				if react.data[0] != act.data[0] {
 					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
