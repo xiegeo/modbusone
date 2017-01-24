@@ -32,12 +32,12 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		n, err := s.r.Read(p[read:])
 		debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v, bufferSize %v", read, n, len(p), err, expected, s.bufferSize)
 		read += n
-		if err != nil || read == len(p) {
-			return read, err
-		}
 		if n > s.bufferSize {
 			debugf("recalibrating rtuPacketReader bufferSize to %v", n)
 			s.bufferSize = n
+		}
+		if err != nil || read == len(p) {
+			return read, err
 		}
 		if read > 0 && n < s.bufferSize {
 			//some data is read, but buffer is not filled,
@@ -88,8 +88,14 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 6 {
 		return 6
 	}
+	if OverSizeSupport {
+		n := int(header[3])*256 + int(header[4])
+		if f.IsUint16() {
+			return 6 + n*2
+		}
+		return 6 + (n-1)/8 + 1
+	}
 	return 6 + int(header[5])
-
 }
 
 //GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given

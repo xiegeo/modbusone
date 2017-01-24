@@ -32,7 +32,13 @@ func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	delay := s.com.MinDelay()
 
-	rb := make([]byte, MaxRTUSize)
+	var rb []byte
+	if OverSizeSupport{
+		rb = make([]byte, OverSizeMaxRTU)
+	}else{
+		rb = make([]byte, MaxRTUSize)
+	}
+	
 	var p PDU
 
 	var ioerr error //make continue do io error checking

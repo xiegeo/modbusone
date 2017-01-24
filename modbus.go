@@ -83,7 +83,7 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 }
 
 //MaxPerPacketSized returns the max number of values a FunctionCode can carry,
-//if we are to further limit PDU packet size.
+//if we are to further limit PDU packet size from MaxRTUSize.
 //At least 1 (8 for bools) is returned if size is too small.
 func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 	if size > MaxPDUSize {
@@ -323,7 +323,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		debugf("fc %v got %v pdu bytes, expected > 6", p.GetFunctionCode(), len(p))
 		return nil, EcIllegalDataValue
 	}
-	if lb != int(p[5]) {
+	if lb != int(p[5]) && !OverSizeSupport {
 		debugf("decleared %v bytes of data, but got %v bytes", p[5], lb)
 		return nil, EcIllegalDataValue
 	}

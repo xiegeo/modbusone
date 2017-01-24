@@ -9,8 +9,17 @@ import (
 //MaxRTUSize is the max possible size of a RTU packet
 const MaxRTUSize = 256
 
-//MaxRTUSize is the max possible size of a PDU packet
+//MaxPDUSize is the max possible size of a PDU packet
 const MaxPDUSize = 253
+
+//OverSizeSupport ignores max packet size and encoded number of bytes to support
+//over sided implementations encountered in the wild. This setting only applies
+//to the server end, since client is always reserved in what it requestes.
+//Also change OverSizeMaxRTU properly
+var OverSizeSupport = false
+
+//OverSizeMaxRTU overides MaxRTUSize when OverSizeSupport is true
+var OverSizeMaxRTU = MaxRTUSize
 
 const smallestRTUSize = 4
 
@@ -42,7 +51,7 @@ func (r RTU) GetPDU() (PDU, error) {
 	return p, nil
 }
 
-//GetPDU returns the PDU inside, with no safety checks.
+//fastGetPDU returns the PDU inside, with no safety checks.
 func (r RTU) fastGetPDU() PDU {
 	return PDU(r[1 : len(r)-2])
 }
