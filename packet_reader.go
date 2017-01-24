@@ -33,7 +33,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v, bufferSize %v", read, n, len(p), err, expected, s.bufferSize)
 		read += n
 		if n > s.bufferSize {
-			debugf("recalibrating rtuPacketReader bufferSize to %v", n)
+			debugf("recalibrating rtuPacketReader bufferSize to %v (sees larger packet)", n)
 			s.bufferSize = n
 		}
 		if err != nil || read == len(p) {
@@ -47,6 +47,10 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				//windows Overlapped IO short read work around
 				//a full buffer read might be split into a 1 and a full-1
 			} else {
+				if read < expected {
+					debugf("recalibrating rtuPacketReader bufferSize to %v (sees early termination)", n)
+					s.bufferSize = n
+				}
 				return read, nil
 			}
 		}
