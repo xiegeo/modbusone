@@ -47,6 +47,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				//windows Overlapped IO short read work around
 				//a full buffer read might be split into a 1 and a full-1
 			} else {
+				expected = GetRTUSizeFromHeader(p, s.isClient)
 				if read < expected {
 					debugf("recalibrating rtuPacketReader bufferSize to %v (sees early termination)", n)
 					s.bufferSize = n
