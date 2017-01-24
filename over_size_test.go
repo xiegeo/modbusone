@@ -24,6 +24,9 @@ func connectToMockServer(slaveID byte) io.ReadWriter {
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
 			return nil
 		},
+		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
+			return make([]uint16, quantity), nil
+		},
 	}
 	go server.Serve(sh)
 	return cc
@@ -63,13 +66,30 @@ func TestOverSize(t *testing.T) {
 	cc = connectToMockServer(slaveID)
 	cc.Write([]byte(rtu))
 	go func() {
-		n, _ := cc.Read(rep)
-		nchan <- n
+		for {
+			n, _ := cc.Read(rep)
+			nchan <- n
+		}
 	}()
 	timeout.Reset(time.Second)
 	select {
 	case n = <-nchan:
 		if "1110000000c8c30f" != fmt.Sprintf("%x", rep[:n]) {
+			t.Fatalf("got unexpected read %x", rep[:n])
+		}
+	case <-timeout.C:
+		t.Fatalf("should not time out")
+	}
+
+	pdu = PDU([]byte{byte(FcReadHoldingRegisters),
+		0, 0, 0, 200})
+	rtu = MakeRTU(slaveID, pdu)
+	cc.Write([]byte(rtu))
+
+	select {
+	case n = <-nchan:
+		//0x90 is from 200 * 2 = 0x0190
+		if "1103900000" != fmt.Sprintf("%x", rep[:5]) {
 			t.Fatalf("got unexpected read %x", rep[:n])
 		}
 	case <-timeout.C:
