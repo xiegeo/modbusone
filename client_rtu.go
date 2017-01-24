@@ -243,7 +243,7 @@ func MakePDURequestHeaders(fc FunctionCode, address, quantity uint16, appendTO [
 	return MakePDURequestHeadersSized(fc, address, quantity, fc.MaxPerPacket(), appendTO)
 }
 
-//MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
+//MakePDURequestHeadersSized generates the list of PDU request headers by spliting quantity
 //into sizes of maxPerPacket or less.
 //Returns an error if quantitiy is out of range.
 //
