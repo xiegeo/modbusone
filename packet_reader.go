@@ -2,57 +2,42 @@ package modbusone
 
 import (
 	"io"
-	"runtime"
+	"math/rand"
+	"time"
+
+	"github.com/xiegeo/modbusone/crc"
 )
 
+var _ = rand.Int63n
+
 type rtuPacketReader struct {
-	r          io.Reader //the underlining reader
-	isClient   bool
-	bufferSize int
+	r        SerialContext //the underlining reader
+	isClient bool
+	last     []byte
 }
 
-//NewRTUPacketReader create a Reader that can read full packets.
+//NewRTUPacketReader create a Reader that attempt to read full packets.
 //
-//The input reader r must only return a read for only two siturations:
-//reading stopped as per Modbus timing based packet terminater,
-//or buffer is full.
 //
-//isClient set how RTU is interpeted.
-//
-//bufferSize is the max read size in bytes of the given reader. When a read reaches
-//bufferSize, a formate aware RTU delimiter is used.
-func NewRTUPacketReader(r io.Reader, isClient bool, bufferSize int) io.Reader {
-	return &rtuPacketReader{r, isClient, bufferSize}
+func NewRTUPacketReader(r SerialContext, isClient bool) io.Reader {
+	return &rtuPacketReader{r, isClient, nil}
 }
 
 func (s *rtuPacketReader) Read(p []byte) (int, error) {
+	s.r.Stats().ReadPackets++
 	expected := smallestRTUSize
 	read := 0
 	for read < expected {
-		n, err := s.r.Read(p[read:])
-		debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v, bufferSize %v", read, n, len(p), err, expected, s.bufferSize)
-		read += n
-		if n > s.bufferSize {
-			debugf("recalibrating rtuPacketReader bufferSize to %v (sees larger packet)", n)
-			s.bufferSize = n
-		}
-		if err != nil || read == len(p) {
-			return read, err
-		}
-		if read > 0 && n < s.bufferSize {
-			//some data is read, but buffer is not filled,
-			//reader must have detected time based message termination.
-
-			if runtime.GOOS == "windows" && (n == 1 || n == s.bufferSize-1) {
-				//windows Overlapped IO short read work around
-				//a full buffer read might be split into a 1 and a full-1
-			} else {
-				expected = GetRTUSizeFromHeader(p, s.isClient)
-				if read < expected {
-					debugf("recalibrating rtuPacketReader bufferSize to %v (sees early termination)", n)
-					s.bufferSize = n
-				}
-				return read, nil
+		if len(s.last) != 0 {
+			read += copy(p, s.last)
+			s.last = s.last[:0]
+		} else {
+			time.Sleep(time.Duration(rand.Int63n(int64(time.Second))))
+			n, err := s.r.Read(p[read:])
+			debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v", read, n, len(p), err, expected)
+			read += n
+			if err != nil || read == len(p) {
+				return read, err
 			}
 		}
 		if read < expected {
@@ -60,8 +45,22 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			continue
 		}
 		//lets see if there is more to read
-		expected = GetRTUSizeFromHeader(p, s.isClient)
+		expected = GetRTUSizeFromHeader(p[:read], s.isClient)
 		debugf("RTUPacketReader new expected size %v", expected)
+		if expected > read-1 {
+			time.Sleep(s.r.BytesDelay(expected - read))
+		}
+	}
+	if read > expected {
+		if crc.Validate(p[:expected]) {
+			s.r.Stats().LongReadWarnings++
+			s.last = append(s.last[:0], p[expected:read]...)
+			debugf("long read warning %v / %v", expected, read)
+			return expected, nil
+		}
+		if crc.Validate(p[:read]) {
+			s.r.Stats().FormateWarnings++
+		}
 	}
 	return read, nil
 }

@@ -23,9 +23,6 @@ var OverSizeMaxRTU = MaxRTUSize
 
 const smallestRTUSize = 4
 
-//StartingSerialBufferSide is the default buffer size to pass to NewRTUPacketReader
-var StartingSerialBufferSide = 32
-
 //RTU is the Modbus RTU Application Data Unit
 type RTU []byte
 
@@ -39,13 +36,15 @@ func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
 }
 
+var ErrorCrc = fmt.Errorf("RTU data crc not valid")
+
 //GetPDU returns the PDU inside, CRC is checked.
 func (r RTU) GetPDU() (PDU, error) {
 	if len(r) < 4 {
 		return nil, fmt.Errorf("RTU data too short to produce PDU")
 	}
 	if !crc.Validate(r) {
-		return nil, fmt.Errorf("RTU data crc not valid")
+		return nil, ErrorCrc
 	}
 	p := r.fastGetPDU()
 	return p, nil

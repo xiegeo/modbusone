@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/tarm/serial"
@@ -58,7 +59,18 @@ func main() {
 		os.Exit(1)
 	}
 	com := modbusone.NewSerialContext(s, int64(*baudRate))
-	defer com.Close()
+	defer func() {
+		fmt.Printf("%+v\n", com.Stats())
+		com.Close()
+	}()
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		<-c
+		fmt.Printf("%+v\n", com.Stats())
+		fmt.Println("close serial port")
+		com.Close()
+	}()
 
 	id, err := modbusone.Uint64ToSlaveID(*slaveID)
 	if err != nil {

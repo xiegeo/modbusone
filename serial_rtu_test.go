@@ -47,18 +47,16 @@ func TestRTU(t *testing.T) {
 
 func TestRTUDelay(t *testing.T) {
 	testCases := []struct {
-		bw    int
+		bw    int64
 		delay time.Duration
 	}{
 		{1, 35 * 11 * time.Second / 10},
 		{19200, 2005209},
 		{38400, 1750000},
 	}
-	p := SerialPort{}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Delay for bw:%v", tc.bw), func(t *testing.T) {
-			p.BaudRate = tc.bw
-			d := p.MinDelay()
+			d := MinDelay(tc.bw)
 			if d != tc.delay {
 				t.Fatalf("expected:%v got:%v", tc.delay, d)
 			}

@@ -26,7 +26,7 @@ var _ Server = &RTUClient{}
 func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 	r := RTUClient{
 		com:                  com,
-		packetReader:         NewRTUPacketReader(com, true, StartingSerialBufferSide),
+		packetReader:         NewRTUPacketReader(com, true),
 		SlaveID:              slaveID,
 		serverProcessingTime: time.Second,
 		actions:              make(chan rtuAction),
@@ -105,6 +105,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 		act := <-c.actions
 		switch act.t {
 		default:
+			c.com.Stats().OtherDrops++
 			debugf("RTUClient drop unexpected: %v", act)
 			continue
 		case clientError:
@@ -155,21 +156,29 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					}
 				}
 				if react.data[0] != act.data[0] {
+					c.com.Stats().IdDrops++
 					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
 					break SELECT
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
+					if err == ErrorCrc {
+						c.com.Stats().CrcErrors++
+					} else {
+						c.com.Stats().OtherErrors++
+					}
 					act.errChan <- err
 					break READ_LOOP
 				}
 				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
+					c.com.Stats().RemoteErrors++
 					handler.OnError(ap, rp)
 					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
 				if !MatchPDU(act.data.fastGetPDU(), rp) {
+					c.com.Stats().OtherErrors++
 					act.errChan <- fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
@@ -177,11 +186,15 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {
+						c.com.Stats().OtherErrors++
 						act.errChan <- err
 						break READ_LOOP
 					}
 					err = handler.OnWrite(ap, bs)
-					act.errChan <- err //success if nill
+					if err != nil {
+						c.com.Stats().OtherErrors++
+					}
+					act.errChan <- err //success if nil
 					break READ_LOOP
 				}
 				act.errChan <- nil //success

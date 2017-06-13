@@ -20,7 +20,7 @@ type RTUServer struct {
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	r := RTUServer{
 		com:          com,
-		packetReader: NewRTUPacketReader(com, false, StartingSerialBufferSide),
+		packetReader: NewRTUPacketReader(com, false),
 		SlaveID:      slaveID,
 	}
 	return &r
@@ -33,12 +33,12 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 	delay := s.com.MinDelay()
 
 	var rb []byte
-	if OverSizeSupport{
+	if OverSizeSupport {
 		rb = make([]byte, OverSizeMaxRTU)
-	}else{
+	} else {
 		rb = make([]byte, MaxRTUSize)
 	}
-	
+
 	var p PDU
 
 	var ioerr error //make continue do io error checking
@@ -65,15 +65,22 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		var err error
 		p, err = r.GetPDU()
 		if err != nil {
+			if err == ErrorCrc {
+				s.com.Stats().CrcErrors++
+			} else {
+				s.com.Stats().OtherErrors++
+			}
 			debugf("RTUServer drop read packet:%v\n", err)
 			continue
 		}
 		if r[0] != 0 && r[0] != s.SlaveID {
+			s.com.Stats().IdDrops++
 			debugf("RTUServer drop packet to other id:%v\n", r[0])
 			continue
 		}
 		err = p.ValidateRequest()
 		if err != nil {
+			s.com.Stats().OtherErrors++
 			debugf("RTUServer auto return for error:%v\n", err)
 			wec(err, r[0])
 			continue
@@ -82,6 +89,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		if fc.IsReadToServer() {
 			data, err := handler.OnRead(p)
 			if err != nil {
+				s.com.Stats().OtherErrors++
 				debugf("RTUServer handler.OnOutput error:%v\n", err)
 				wec(err, r[0])
 				continue
@@ -90,12 +98,14 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 		} else if fc.IsWriteToServer() {
 			data, err := p.GetRequestValues()
 			if err != nil {
+				s.com.Stats().OtherErrors++
 				debugf("RTUServer p.GetRequestValues error:%v\n", err)
 				wec(err, r[0])
 				continue
 			}
 			err = handler.OnWrite(p, data)
 			if err != nil {
+				s.com.Stats().OtherErrors++
 				debugf("RTUServer handler.OnInput error:%v\n", err)
 				wec(err, r[0])
 				continue
