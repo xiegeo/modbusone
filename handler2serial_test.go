@@ -15,6 +15,7 @@ type mockSerial struct {
 	io.Reader
 	io.Writer
 	LastWritten []byte
+	s           Stats
 }
 
 func newMockSerial(r io.Reader, w io.Writer) *mockSerial {
@@ -27,6 +28,7 @@ func (s *mockSerial) Write(data []byte) (n int, err error) {
 func (s *mockSerial) Close() error                   { return nil }
 func (s *mockSerial) MinDelay() time.Duration        { return 0 }
 func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
+func (s *mockSerial) Stats() *Stats                  { return &s.s }
 
 //TestHandler runs through each of simplymodbus.ca's samples, conforms both
 //end-to-end behavior and wire format
