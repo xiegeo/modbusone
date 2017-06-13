@@ -13,11 +13,21 @@ In my use case, client/server should be interchangeable. User code should worry 
 
 This means that a remote function call like API, which is effective as a client side API, is insufficient.
 
-Instead, a callback based API (think http server handler) is used for both server and client.
+Instead, a callback based API (like http server handler) is used for both server and client.
+
+## Implemented
+- Serial RTU
+- Function Codes 1-6,15,16
+- Server and Client API
+- Server and Client Tester (examples/memory)
+
+## Future
+- Floating point support
+- TCP (maybe)
 
 ## Development
 
-This project is mostly stable, and I am starting to use it in production.
+This project is mostly stable, and I am using it in production.
 
 API stability is best effort. This means: 
 
@@ -25,17 +35,23 @@ API stability is best effort. This means:
 
 * Code broken by API Changles should not compile, new errors to user code should not be introduced silently. 
 
-* API Changes will be documented (add link here) to help someone losing their mind when working code stopped compiling.
+* API Changes will be documented to help someone losing their mind when working code stopped compiling.
 
 My primary usage is RTU (over RS-485). Others may or may not be implemented in the future.
 
 Contribution to new or existing functionally, or just changing a private identifier public are welcome, as well as documentation, test, example code or any other improvements. 
 
+## Breaking Changes
+2017-06-13
+    Removed dependency on goburrow/serial. All serial connections should be created with NewSerialContext, which can accept any ReadWriteCloser
+
 ## Challenges
 
-<strike>Working on physical layer protocol in a cross platform application layer means delay as a terminator is harder to work with.</strike> 
-<strike>The driver is doing this for me.</strike>
-Unless the data is bigger than the build in buffer size. Right now a hybrid approch is used: if read is not full buffer size, then end packet; if full buffer size, then read data for the expected length by function code and encoded length.
+Packet separation uses a mix of length and timing indications. Length is used
+if CRC is valide, otherwise timing indications is used to find where the next 
+packet starts.
+
+Compatibility with wide range of serial hardware/drivers.
 
 Compatibility with different existing Modbus environments. (needs more testing)
 
