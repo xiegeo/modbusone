@@ -32,7 +32,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			read += copy(p, s.last)
 			s.last = s.last[:0]
 		} else {
-			time.Sleep(time.Duration(rand.Int63n(int64(time.Second))))
+			//time.Sleep(time.Duration(rand.Int63n(int64(time.Second))))
 			n, err := s.r.Read(p[read:])
 			debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v", read, n, len(p), err, expected)
 			read += n
