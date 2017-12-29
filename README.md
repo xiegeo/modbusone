@@ -57,7 +57,14 @@ Compatibility with different existing Modbus environments. (needs more testing)
 
 Recover from transmission errors and timeouts, to work continuously unattended. (needs more testing)
 
-Fuzze testing against crashes.
+Fuzz testing against crashes.
+
+## Failover mode
+In mission critical applications, or anywhere hardware redundancy is cheaper than downtime, having a standby system taking over in case of the failure of the primary system is desirable.
+
+Ideally, failover is implemented in the application level, which speaks over two serial ports simultaneously, only acting on the values from one of the ports at a time. But this may not be always possible. A "foreign" application, which you have no control over, might not have this feature. As such, failover mode attempts to addresses this by allowing two separate hardware devices sharing a single serial bus to appear as a single device. This failover mode is outside the design of the original Modbus protocol.
+
+The basic operation of failover mode is to stay quite on the port until the primary fails. While staying quite, it relays all read and writes to the application side as if it is the primary. This allows the application to stay in sync for a hot switchover when the primary fails.
 
 ## Definitions
 
