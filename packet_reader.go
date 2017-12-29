@@ -88,7 +88,7 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 		//fc, address, one data
 		return 5
 	}
-	//fc, adress, count, data bytes, data
+	//fc, address, count, data bytes, data
 	if len(header) < 6 {
 		return 6
 	}
