@@ -26,6 +26,11 @@ func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	return &r
 }
 
+func (s *RTUServer) UseBidirectionalReader() *RTUServer {
+	s.packetReader = NewRTUBidirectionalPacketReader(s.com)
+	return s
+}
+
 //Serve runs the server and only returns after unrecoverable error, such as
 //SerialContext is closed. Read is assumed to only read full packets,
 //as per RTU delay based spec.

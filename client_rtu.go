@@ -34,6 +34,11 @@ func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 	return &r
 }
 
+func (c *RTUClient) UseBidirectionalReader() *RTUClient {
+	c.packetReader = NewRTUBidirectionalPacketReader(c.com)
+	return c
+}
+
 //SetServerProcessingTime sets the time to wait for a server response, the total
 //wait time also includes the time needed for data transmission
 func (c *RTUClient) SetServerProcessingTime(t time.Duration) {

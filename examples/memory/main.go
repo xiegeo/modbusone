@@ -70,6 +70,7 @@ func main() {
 		fmt.Printf("%+v\n", com.Stats())
 		fmt.Println("close serial port")
 		com.Close()
+		os.Exit(0)
 	}()
 
 	id, err := modbusone.Uint64ToSlaveID(*slaveID)

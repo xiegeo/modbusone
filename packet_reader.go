@@ -11,16 +11,21 @@ import (
 var _ = rand.Int63n
 
 type rtuPacketReader struct {
-	r        SerialContext //the underlining reader
-	isClient bool
-	last     []byte
+	r           SerialContext //the underlining reader
+	isClient    bool
+	bidirection bool
+	last        []byte
 }
 
 //NewRTUPacketReader create a Reader that attempt to read full packets.
-//
-//
 func NewRTUPacketReader(r SerialContext, isClient bool) io.Reader {
-	return &rtuPacketReader{r, isClient, nil}
+	return &rtuPacketReader{r, isClient, false, nil}
+}
+
+//NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
+//that comes from either server or client.
+func NewRTUBidirectionalPacketReader(r SerialContext) io.Reader {
+	return &rtuPacketReader{r, false, true, nil}
 }
 
 func (s *rtuPacketReader) Read(p []byte) (int, error) {
@@ -45,7 +50,11 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			continue
 		}
 		//lets see if there is more to read
-		expected = GetRTUSizeFromHeader(p[:read], s.isClient)
+		if s.bidirection {
+			expected = GetRTUBidirectionSizeFromHeader(p[:read])
+		} else {
+			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
+		}
 		debugf("RTUPacketReader new expected size %v", expected)
 		if expected > read-1 {
 			time.Sleep(s.r.BytesDelay(expected - read))
@@ -110,4 +119,24 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 		return 3
 	}
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
+}
+
+//GetRTUBidirectionSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
+//by checking the hash for disambiguation.
+func GetRTUBidirectionSizeFromHeader(header []byte) int {
+	s := GetRTUSizeFromHeader(header, false)
+	l := GetRTUSizeFromHeader(header, true)
+	if s == l {
+		return s
+	}
+	if s > l {
+		s, l = l, s
+	}
+	if s > len(header) {
+		return s
+	}
+	if s == len(header) && crc.Validate(header) {
+		return s
+	}
+	return l
 }
