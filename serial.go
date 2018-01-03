@@ -38,7 +38,7 @@ func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{conn, baudRate, Stats{}}
 }
 
-//Read reads the serial port and removes the timeout error
+//Read reads the serial port
 func (s *serial) Read(b []byte) (int, error) {
 	n, err := s.conn.Read(b)
 	return n, err

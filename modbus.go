@@ -290,7 +290,7 @@ func (p PDU) GetFunctionCode() FunctionCode {
 	return FunctionCode(p[0])
 }
 
-//GetAddress returns the stating address,
+//GetAddress returns the starting address,
 //If PDU is invalid, behavior is undefined (can panic).
 func (p PDU) GetAddress() uint16 {
 	return uint16(p[1])<<8 | uint16(p[2])
