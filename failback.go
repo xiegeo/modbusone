@@ -96,7 +96,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		pdu, err := rtu.GetPDU()
 		if err != nil {
 			debugf("GetPDU error : %v", err)
-			continue
+			return n, nil //bubbles formate up errors
 		}
 		if rtu[0] == 0 {
 			//zero slave id do not have a reply, so we won't expect one
