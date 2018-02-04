@@ -137,7 +137,7 @@ func debugf(format string, a ...interface{}) {
 	if DebugOut == nil {
 		return
 	}
-	fmt.Fprintf(DebugOut, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
+	fmt.Fprintf(DebugOut, "[%s]", tnow().Format("06-01-02 15:04:05.000000"))
 	fmt.Fprintf(DebugOut, format, a...)
 	lf := len(format)
 	if lf > 0 && format[lf-1] != '\n' {

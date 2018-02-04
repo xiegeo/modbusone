@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var tnow = time.Now //allows for testing with fake time
+
 var SecondaryDelay = time.Second / 10
 var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary to detect failback
 
@@ -15,11 +17,11 @@ var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary
 //bus is not supported. If the other side supports multiple slave ids, then
 //it is best to implement failback on the other side using slaveId method.
 type FailbackSerialConn struct {
-	serial       //base SerialContext
-	packetReader io.Reader
-	isServer     bool //client or server
-	isFailback   bool //primary or failback
-	isActive     bool //active or passive
+	SerialContext //base SerialContext
+	packetReader  io.Reader
+	isServer      bool //client or server
+	isFailback    bool //primary or failback
+	isActive      bool //active or passive
 
 	requestTime time.Time //time of the last packet observed passively
 	reqPacket   PDU
@@ -46,25 +48,25 @@ type FailbackSerialConn struct {
 	clientLastMessage time.Time
 }
 
-//NewSerialContext creates a SerialContext from any io.ReadWriteCloser
-func NewFailbackServerlConn(conn io.ReadWriteCloser, baudRate int64, isFailback bool) *FailbackSerialConn {
+//NewFailbackServerlConn adds failback funtion to a SerialContext
+func NewFailbackConn(sc SerialContext, isFailback, isServer bool) *FailbackSerialConn {
 	c := &FailbackSerialConn{
-		serial:                 serial{conn, baudRate, Stats{}},
-		isServer:               true,
+		SerialContext:          sc,
+		isServer:               isServer,
 		isFailback:             isFailback,
-		PrimaryDisconnectDelay: 10 * time.Second,
+		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
-		startTime:              time.Now(),
+		startTime:              tnow(),
 		ServerMissesMax:        5,
 	}
-	c.packetReader = NewRTUBidirectionalPacketReader(&c.serial)
+	c.packetReader = NewRTUBidirectionalPacketReader(c.SerialContext)
 	return c
 }
 
 //Read reads the serial port
 func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 	defer func() {
-		s.lastRead = time.Now()
+		s.lastRead = tnow()
 	}()
 	if !s.isServer {
 		return 0, errors.New("todo client failback")
@@ -76,16 +78,16 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		}
 		if !s.isFailback {
 			if !s.isActive {
-				if s.startTime.Add(s.PrimaryForceBackDelay).Before(time.Now()) {
+				if s.startTime.Add(s.PrimaryForceBackDelay).Before(tnow()) {
 					debugf("force active of primary/n")
 					s.isActive = true
 				}
 			}
 			if s.isActive {
-				if s.lastRead.Add(s.PrimaryDisconnectDelay).Before(time.Now()) {
+				if s.lastRead.Add(s.PrimaryDisconnectDelay).Before(tnow()) {
 					debugf("primary was disconnected for too long/n")
 					s.isActive = false
-					s.startTime = time.Now()
+					s.startTime = tnow()
 				} else {
 					return n, nil
 				}
@@ -110,7 +112,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 			//are we getting interrupted?
 			if s.requestTime.IsZero() {
 				//this should be a client request
-				s.requestTime = time.Now()
+				s.requestTime = tnow()
 				return n, nil
 			}
 			//yes
@@ -123,11 +125,11 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		} else {
 			//we are passive here
 			if s.requestTime.IsZero() {
-				s.requestTime = time.Now()
+				s.requestTime = tnow()
 				s.reqPacket = pdu
 				return n, nil
 			}
-			now := time.Now()
+			now := tnow()
 			if now.Sub(s.requestTime) > MissDelay+s.BytesDelay(n) {
 				s.requestTime = now
 				s.serverMisses++
@@ -161,7 +163,7 @@ func (s *FailbackSerialConn) Write(b []byte) (int, error) {
 			}
 		}
 		s.resetRequestTime()
-		return s.serial.Write(b)
+		return s.SerialContext.Write(b)
 	}
 endActive:
 	debugf("FailbackSerialConn ignore Write:%x\n", b)
