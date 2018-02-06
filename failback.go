@@ -24,7 +24,7 @@ type FailbackSerialConn struct {
 	isActive      bool //active or passive
 
 	requestTime time.Time //time of the last packet observed passively
-	reqPacket   PDU
+	reqPacket   bytes.Buffer
 	lastRead    time.Time
 
 	//if primary has not recived data for this long, it thinks it's disconnected
@@ -94,7 +94,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 			}
 		}
 
-		rtu := RTU(b)
+		rtu := RTU(b[:n])
 		pdu, err := rtu.GetPDU()
 		if err != nil {
 			debugf("GetPDU error : %v", err)
@@ -112,7 +112,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 			//are we getting interrupted?
 			if s.requestTime.IsZero() {
 				//this should be a client request
-				s.requestTime = tnow()
+				s.setLastReqTime(pdu, tnow()) //reset is called on write
 				return n, nil
 			}
 			//yes
@@ -124,30 +124,29 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 
 		} else {
 			//we are passive here
+			now := tnow()
 			if s.requestTime.IsZero() {
-				s.requestTime = tnow()
-				s.reqPacket = pdu
+				s.setLastReqTime(pdu, now)
 				return n, nil
 			}
-			now := tnow()
 			if now.Sub(s.requestTime) > MissDelay+s.BytesDelay(n) {
-				s.requestTime = now
 				s.serverMisses++
 				if s.serverMisses > s.ServerMissesMax {
 					s.isActive = true
+				} else {
+					s.setLastReqTime(pdu, now)
 				}
 				return n, nil
 			}
 
 			s.serverMisses = 0
-			if IsRequestReply(s.reqPacket, pdu) {
+			if IsRequestReply(s.reqPacket.Bytes(), pdu) {
 				s.resetRequestTime()
 				debugf("ignore read of reply from the other server")
 				continue
 			}
 			debugf("switch around request and reply pairs")
-			s.requestTime = now
-			s.reqPacket = pdu
+			s.setLastReqTime(pdu, now)
 			return n, nil
 		}
 		return n, errors.New("assert deadcode at end of read")
@@ -171,21 +170,28 @@ endActive:
 }
 
 func (s *FailbackSerialConn) resetRequestTime() {
-	s.requestTime = time.Time{}
-	s.reqPacket = nil
+	s.requestTime = time.Time{} //zero time
+	s.reqPacket.Reset()
+}
+
+func (s *FailbackSerialConn) setLastReqTime(pdu PDU, now time.Time) {
+	s.requestTime = now
+	s.reqPacket.Reset()
+	s.reqPacket.Write(pdu)
 }
 
 func IsRequestReply(r, a PDU) bool {
+	debugf("IsRequestReply %x %x\n", r, a)
 	if r.GetFunctionCode() != a.GetFunctionCode() {
 		debugf("diff fc\n")
 		return false
 	}
-	if GetPDUSizeFromHeader(r, true) != len(r) {
-		debugf("size not req\n")
+	if GetPDUSizeFromHeader(r, false) != len(r) {
+		debugf("r size not req %v, %x\n", GetPDUSizeFromHeader(r, true), r)
 		return false
 	}
-	if GetPDUSizeFromHeader(a, false) != len(a) {
-		debugf("size not rep\n")
+	if GetPDUSizeFromHeader(a, true) != len(a) {
+		debugf("a size not rep %v, %x\n", GetPDUSizeFromHeader(a, false), a)
 		return false
 	}
 	eq := false

@@ -3,7 +3,9 @@ package modbusone
 import (
 	"fmt"
 	"io"
+	"os"
 	"testing"
+	"time"
 )
 
 type reader func(p []byte) (n int, err error)
@@ -20,104 +22,126 @@ func (w writer) Write(p []byte) (n int, err error) {
 
 var expectA = true //expect A to talk
 
-func connectToMockServers(slaveID byte) (*RTUClient, *SimpleHandler, *SimpleHandler) {
+type counter struct {
+	reads  int
+	writes int
+}
 
-	//pipe from client to 2 servers
-	ra, w1a := io.Pipe()
-	rb, w1b := io.Pipe()
-	w1 := io.MultiWriter(w1a, w1b)
+func (c *counter) reset() {
+	c.reads = 0
+	c.writes = 0
+}
 
-	//pipe from 2 servers to client
-	r2, w2 := io.Pipe()
-	wa := writer(func(p []byte) (n int, err error) {
+func newTestHandler(name string) ([]uint16, *SimpleHandler, *counter) {
+	var holdingRegisters [100]uint16
+	count := counter{}
+	shA := &SimpleHandler{
+		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
+			fmt.Printf("Read %s %v, quantity %v\n", name, address, quantity)
+			count.reads += int(quantity)
+			return holdingRegisters[address : address+quantity], nil
+		},
+		WriteHoldingRegisters: func(address uint16, values []uint16) error {
+			fmt.Printf("Write %s %v, quantity %v\n", name, address, len(values))
+			count.writes += len(values)
+			for i, v := range values {
+				holdingRegisters[address+uint16(i)] = v
+			}
+			return nil
+		},
+	}
+	return holdingRegisters[:], shA, &count
+}
+
+func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counter) {
+
+	//pipes
+	ra, wa := io.Pipe() //server a
+	rb, wb := io.Pipe() //server b
+	rc, wc := io.Pipe() //client
+
+	//everyone writes to everyone else
+	wfc := io.MultiWriter(wa, wb)
+	wfa := writer(func(p []byte) (n int, err error) {
 		if !expectA {
 			panic("expectA is false when A talked")
 		}
-		return w2.Write(p)
+		wb.Write(p)
+		return wc.Write(p)
 	})
-	wb := writer(func(p []byte) (n int, err error) {
+	wfb := writer(func(p []byte) (n int, err error) {
 		if expectA {
 			panic("expectA is true when B talked")
 		}
-		return w2.Write(p)
+		wa.Write(p)
+		return wc.Write(p)
 	})
 
-	cc := newMockSerial(r2, w1)                              //client connection
-	sa := newMockSerial(ra, wa)                              //server a connection
-	sb := NewFailbackConn(newMockSerial(rb, wb), true, true) //server b connection
+	sa := newMockSerial(ra, wfa)                              //server a connection
+	sb := NewFailbackConn(newMockSerial(rb, wfb), true, true) //server b connection
+	cc := newMockSerial(rc, wfc)                              //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
 	client := NewRTUCLient(cc, slaveID)
 
-	var holdingRegistersA [100]uint16
-	var holdingRegistersB [100]uint16
-	var holdingRegistersC [100]uint16
-	shA := &SimpleHandler{
-		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-			fmt.Printf("Read shA from %v, quantity %v\n", address, quantity)
-			return holdingRegistersA[address : address+quantity], nil
-		},
-		WriteHoldingRegisters: func(address uint16, values []uint16) error {
-			fmt.Printf("Write shA %v, quantity %v\n", address, len(values))
-			for i, v := range values {
-				holdingRegistersA[address+uint16(i)] = v
-			}
-			return nil
-		},
+	_, shA, countA := newTestHandler("server A")
+	_, shB, countB := newTestHandler("server B")
+	holdingRegistersC, shC, countC := newTestHandler("client")
+	for i := range holdingRegistersC {
+		holdingRegistersC[i] = uint16(i + 1<<8)
 	}
-	shB := &SimpleHandler{
-		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-			fmt.Printf("Read shB from %v, quantity %v\n", address, quantity)
-			return holdingRegistersB[address : address+quantity], nil
-		},
-		WriteHoldingRegisters: func(address uint16, values []uint16) error {
-			fmt.Printf("Write shB from %v, quantity %v\n", address, len(values))
-			for i, v := range values {
-				holdingRegistersB[address+uint16(i)] = v
-			}
-			return nil
-		},
-	}
-	shC := &SimpleHandler{
-		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-			fmt.Printf("Read client from %v, quantity %v\n", address, quantity)
-			return holdingRegistersC[address : address+quantity], nil
-		},
-		WriteHoldingRegisters: func(address uint16, values []uint16) error {
-			fmt.Printf("Write client from %v, quantity %v\n", address, len(values))
-			for i, v := range values {
-				holdingRegistersC[address+uint16(i)] = v
-			}
-			return nil
-		},
-	}
+
 	go serverA.Serve(shA)
 	go serverB.Serve(shB)
 	go client.Serve(shC)
-	return client, shA, shB
+	return client, countA, countB, countC
 }
 
 func TestFailback(t *testing.T) {
 	id := byte(3)
-	client, _, _ := connectToMockServers(id)
+	client, countA, countB, countC := connectToMockServers(id)
 	type tc struct {
 		fc   FunctionCode
 		size uint16
 	}
 	testCases := []tc{
-		{FcWriteSingleRegister, 1},
 		{FcWriteSingleRegister, 2},
+		{FcWriteMultipleRegisters, 2},
+		{FcReadHoldingRegisters, 2},
 	}
+	exCount := counter{}
+	_ = os.Stdout
+	//DebugOut = os.Stdout
 	for i, ts := range testCases {
-		reqs, err := MakePDURequestHeadersSized(ts.fc, 0, ts.size, 0, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = DoTransactions(client, id, reqs)
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run(fmt.Sprintf("%v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {
+			reqs, err := MakePDURequestHeadersSized(ts.fc, 0, ts.size, 1, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = DoTransactions(client, id, reqs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Second / 100)
+			if ts.fc.IsWriteToServer() {
+				exCount.writes += int(ts.size)
+			} else {
+				exCount.reads += int(ts.size)
+			}
+			if exCount.reads != countC.writes || exCount.writes != countC.reads {
+				t.Error("client counter:", countC, "expected (inverted):", exCount)
+			}
+			if exCount.reads != countA.reads || exCount.writes != countA.writes {
+				t.Error("server a counter:", countA, "expected:", exCount)
+			}
+			if exCount.reads != countB.reads || exCount.writes != countB.writes {
+				t.Error("server b counter:", countB, "expected:", exCount)
+			}
+			exCount.reset()
+			countA.reset()
+			countB.reset()
+			countC.reset()
+		})
 	}
-
 }

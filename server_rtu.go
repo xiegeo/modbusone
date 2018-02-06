@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 )
 
@@ -132,11 +133,14 @@ func Uint64ToSlaveID(n uint64) (byte, error) {
 
 //DebugOut sets where to print debug messages
 var DebugOut io.Writer
+var debugLock sync.Mutex
 
 func debugf(format string, a ...interface{}) {
 	if DebugOut == nil {
 		return
 	}
+	debugLock.Lock()
+	defer debugLock.Unlock()
 	fmt.Fprintf(DebugOut, "[%s]", tnow().Format("06-01-02 15:04:05.000000"))
 	fmt.Fprintf(DebugOut, format, a...)
 	lf := len(format)
