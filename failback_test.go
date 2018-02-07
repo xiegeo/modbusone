@@ -23,13 +23,19 @@ func (w writer) Write(p []byte) (n int, err error) {
 var expectA = true //expect A to talk
 
 type counter struct {
+	*Stats
 	reads  int
 	writes int
 }
 
 func (c *counter) reset() {
+	c.Stats.Reset()
 	c.reads = 0
 	c.writes = 0
+}
+
+func (c counter) String() string {
+	return fmt.Sprintf("reads:%v writes:%v drops:%v", c.reads, c.writes, c.TotalDrops())
 }
 
 func newTestHandler(name string) ([]uint16, *SimpleHandler, *counter) {
@@ -61,21 +67,9 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	rc, wc := io.Pipe() //client
 
 	//everyone writes to everyone else
+	wfa := io.MultiWriter(wb, wc) //write from a, etc...
+	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
-	wfa := writer(func(p []byte) (n int, err error) {
-		if !expectA {
-			panic("expectA is false when A talked")
-		}
-		wb.Write(p)
-		return wc.Write(p)
-	})
-	wfb := writer(func(p []byte) (n int, err error) {
-		if expectA {
-			panic("expectA is true when B talked")
-		}
-		wa.Write(p)
-		return wc.Write(p)
-	})
 
 	sa := newMockSerial(ra, wfa)                              //server a connection
 	sb := NewFailbackConn(newMockSerial(rb, wfb), true, true) //server b connection
@@ -86,8 +80,11 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	client := NewRTUCLient(cc, slaveID)
 
 	_, shA, countA := newTestHandler("server A")
+	countA.Stats = sa.Stats()
 	_, shB, countB := newTestHandler("server B")
+	countB.Stats = sb.Stats()
 	holdingRegistersC, shC, countC := newTestHandler("client")
+	countC.Stats = cc.Stats()
 	for i := range holdingRegistersC {
 		holdingRegistersC[i] = uint16(i + 1<<8)
 	}
@@ -110,7 +107,7 @@ func TestFailback(t *testing.T) {
 		{FcWriteMultipleRegisters, 2},
 		{FcReadHoldingRegisters, 2},
 	}
-	exCount := counter{}
+	exCount := counter{Stats: &Stats{}}
 	_ = os.Stdout
 	//DebugOut = os.Stdout
 	for i, ts := range testCases {
@@ -130,14 +127,18 @@ func TestFailback(t *testing.T) {
 				exCount.reads += int(ts.size)
 			}
 			if exCount.reads != countC.writes || exCount.writes != countC.reads {
-				t.Error("client counter:", countC, "expected (inverted):", exCount)
+				t.Error("client counter     ", countC)
+				t.Error("expected (inverted)", exCount)
 			}
 			if exCount.reads != countA.reads || exCount.writes != countA.writes {
-				t.Error("server a counter:", countA, "expected:", exCount)
+				t.Error("server a counter", countA)
+				t.Error("expected        ", exCount)
 			}
 			if exCount.reads != countB.reads || exCount.writes != countB.writes {
-				t.Error("server b counter:", countB, "expected:", exCount)
+				t.Error("server b counter", countB)
+				t.Error("expected        ", exCount)
 			}
+
 			exCount.reset()
 			countA.reset()
 			countB.reset()

@@ -135,7 +135,10 @@ func GetRTUBidirectionSizeFromHeader(header []byte) int {
 	if s > len(header) {
 		return s
 	}
-	if s == len(header) && crc.Validate(header) {
+	if l >= len(header) && crc.Validate(header[:l]) {
+		return l
+	}
+	if crc.Validate(header[:s]) {
 		return s
 	}
 	return l

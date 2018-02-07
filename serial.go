@@ -33,6 +33,16 @@ type Stats struct {
 	OtherDrops       int64
 }
 
+func (s *Stats) Reset() {
+	*s = Stats{}
+}
+
+func (s *Stats) TotalDrops() int64 {
+	return s.CrcErrors + s.RemoteErrors + s.OtherErrors +
+		s.LongReadWarnings + s.FormateWarnings +
+		s.IdDrops + s.OtherDrops
+}
+
 //NewSerialContext creates a SerialContext from any io.ReadWriteCloser
 func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{conn, baudRate, Stats{}}
