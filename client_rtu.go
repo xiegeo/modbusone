@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 )
 
@@ -12,7 +11,7 @@ import (
 //be used by a ProtocalHandler
 type RTUClient struct {
 	com                  SerialContext
-	packetReader         io.Reader
+	packetReader         PacketReader
 	SlaveID              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
@@ -24,19 +23,18 @@ var _ Server = &RTUClient{}
 //NewRTUCLient create a new client communicating over SerialContext with the
 //give slaveID as default.
 func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
+	pr, ok := com.(PacketReader)
+	if !ok {
+		pr = NewRTUPacketReader(com, true)
+	}
 	r := RTUClient{
 		com:                  com,
-		packetReader:         NewRTUPacketReader(com, true),
+		packetReader:         pr,
 		SlaveID:              slaveID,
 		serverProcessingTime: time.Second,
 		actions:              make(chan rtuAction),
 	}
 	return &r
-}
-
-func (c *RTUClient) UseBidirectionalReader() *RTUClient {
-	c.packetReader = NewRTUBidirectionalPacketReader(c.com)
-	return c
 }
 
 //SetServerProcessingTime sets the time to wait for a server response, the total

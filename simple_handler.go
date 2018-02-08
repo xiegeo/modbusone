@@ -41,7 +41,10 @@ type SimpleHandler struct {
 func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 	fc := req.GetFunctionCode()
 	address := req.GetAddress()
-	count := req.GetRequestCount()
+	count, err := req.GetRequestCount()
+	if err != nil {
+		return nil, err
+	}
 
 	switch fc {
 	case FcReadDiscreteInputs:
@@ -88,7 +91,10 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
 	fc := req.GetFunctionCode()
 	address := req.GetAddress()
-	count := req.GetRequestCount()
+	count, err := req.GetRequestCount()
+	if err != nil {
+		return err
+	}
 	switch fc {
 	case FcReadDiscreteInputs:
 		if h.WriteDiscreteInputs == nil {

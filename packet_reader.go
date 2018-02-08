@@ -10,6 +10,11 @@ import (
 
 var _ = rand.Int63n
 
+type PacketReader interface {
+	io.Reader
+	PacketReaderFace() //signals that this reader returns full packets
+}
+
 type rtuPacketReader struct {
 	r           SerialContext //the underlining reader
 	isClient    bool
@@ -18,15 +23,17 @@ type rtuPacketReader struct {
 }
 
 //NewRTUPacketReader create a Reader that attempt to read full packets.
-func NewRTUPacketReader(r SerialContext, isClient bool) io.Reader {
+func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r, isClient, false, nil}
 }
 
 //NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
 //that comes from either server or client.
-func NewRTUBidirectionalPacketReader(r SerialContext) io.Reader {
+func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
 	return &rtuPacketReader{r, false, true, nil}
 }
+
+func (s *rtuPacketReader) PacketReaderFace() {}
 
 func (s *rtuPacketReader) Read(p []byte) (int, error) {
 	s.r.Stats().ReadPackets++
@@ -52,10 +59,11 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		//lets see if there is more to read
 		if s.bidirection {
 			expected = GetRTUBidirectionSizeFromHeader(p[:read])
+			debugf("RTUPacketReader new expected size %v %x", expected, p[:read])
 		} else {
 			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
+			debugf("RTUPacketReader new expected size %v %v %x", expected, s.isClient, p[:read])
 		}
-		debugf("RTUPacketReader new expected size %v", expected)
 		if expected > read-1 {
 			time.Sleep(s.r.BytesDelay(expected - read))
 		}
@@ -135,7 +143,7 @@ func GetRTUBidirectionSizeFromHeader(header []byte) int {
 	if s > len(header) {
 		return s
 	}
-	if l >= len(header) && crc.Validate(header[:l]) {
+	if l <= len(header) && crc.Validate(header[:l]) {
 		return l
 	}
 	if crc.Validate(header[:s]) {

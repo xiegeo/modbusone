@@ -13,23 +13,22 @@ import (
 //be used by a ProtocalHandler
 type RTUServer struct {
 	com          SerialContext
-	packetReader io.Reader
+	packetReader PacketReader
 	SlaveID      byte
 }
 
 //NewRTUServer creates a RTU server on SerialContext listening on slaveID
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
+	pr, ok := com.(PacketReader)
+	if !ok {
+		pr = NewRTUPacketReader(com, false)
+	}
 	r := RTUServer{
 		com:          com,
-		packetReader: NewRTUPacketReader(com, false),
+		packetReader: pr,
 		SlaveID:      slaveID,
 	}
 	return &r
-}
-
-func (s *RTUServer) UseBidirectionalReader() *RTUServer {
-	s.packetReader = NewRTUBidirectionalPacketReader(s.com)
-	return s
 }
 
 //Serve runs the server and only returns after unrecoverable error, such as

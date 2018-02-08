@@ -3,7 +3,6 @@ package modbusone
 import (
 	"bytes"
 	"errors"
-	"io"
 	"time"
 )
 
@@ -18,10 +17,10 @@ var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary
 //it is best to implement failback on the other side using slaveId method.
 type FailbackSerialConn struct {
 	SerialContext //base SerialContext
-	packetReader  io.Reader
-	isServer      bool //client or server
-	isFailback    bool //primary or failback
-	isActive      bool //active or passive
+	PacketReader
+	isServer   bool //client or server
+	isFailback bool //primary or failback
+	isActive   bool //active or passive
 
 	requestTime time.Time //time of the last packet observed passively
 	reqPacket   bytes.Buffer
@@ -57,9 +56,12 @@ func NewFailbackConn(sc SerialContext, isFailback, isServer bool) *FailbackSeria
 		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
 		startTime:              tnow(),
-		ServerMissesMax:        5,
+		ServerMissesMax:        3,
 	}
-	c.packetReader = NewRTUBidirectionalPacketReader(c.SerialContext)
+	if isFailback {
+		c.ServerMissesMax += 2
+	}
+	c.PacketReader = NewRTUBidirectionalPacketReader(c.SerialContext)
 	return c
 }
 
@@ -72,7 +74,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		return 0, errors.New("todo client failback")
 	}
 	for {
-		n, err := s.packetReader.Read(b)
+		n, err := s.PacketReader.Read(b)
 		if err != nil {
 			return n, err
 		}
@@ -97,7 +99,7 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		rtu := RTU(b[:n])
 		pdu, err := rtu.GetPDU()
 		if err != nil {
-			debugf("GetPDU error : %v", err)
+			debugf("failback internal GetPDU error : %v", err)
 			return n, nil //bubbles formate up errors
 		}
 		if rtu[0] == 0 {
@@ -194,12 +196,17 @@ func IsRequestReply(r, a PDU) bool {
 		debugf("a size not rep %v, %x\n", GetPDUSizeFromHeader(a, false), a)
 		return false
 	}
+	c, err := r.GetRequestCount()
+	if err != nil {
+		debugf("GetRequestCount error %v\n", err)
+		return false
+	}
 	eq := false
 	switch r.GetFunctionCode() {
 	case FcReadCoils, FcReadDiscreteInputs:
-		eq = uint8((r.GetRequestCount()+7)/8) == a[1]
+		eq = uint8((c+7)/8) == a[1]
 	case FcReadHoldingRegisters, FcReadInputRegisters:
-		eq = uint8(r.GetRequestCount()*2) == a[1]
+		eq = uint8(c*2) == a[1]
 	case FcWriteSingleCoil, FcWriteSingleRegister,
 		FcWriteMultipleCoils, FcWriteMultipleRegisters:
 		eq = bytes.Equal(r[:5], a[:5])

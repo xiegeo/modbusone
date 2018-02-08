@@ -297,12 +297,15 @@ func (p PDU) GetAddress() uint16 {
 }
 
 //GetRequestCount returns the number of values requested,
-//If PDU is invalid (too short), behavior is undefined (can panic).
-func (p PDU) GetRequestCount() uint16 {
+//If PDU is invalid (too short), return 0 with error.
+func (p PDU) GetRequestCount() (uint16, error) {
 	if p.GetFunctionCode().IsSingle() {
-		return 1
+		return 1, nil
 	}
-	return uint16(p[3])<<8 | uint16(p[4])
+	if len(p) < 5 {
+		return 0, EcIllegalDataValue
+	}
+	return uint16(p[3])<<8 | uint16(p[4]), nil
 }
 
 //GetRequestValues returns the values in a write request
@@ -327,7 +330,11 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		debugf("decleared %v bytes of data, but got %v bytes", p[5], lb)
 		return nil, EcIllegalDataValue
 	}
-	l := int(p.GetRequestCount())
+	count, err := p.GetRequestCount()
+	if err != nil {
+		return nil, err
+	}
+	l := int(count)
 	// check if start + count is highter than max range
 	if l+int(p.GetAddress()) > int(p.GetFunctionCode().MaxRange()) {
 		debugf("address out of range")
