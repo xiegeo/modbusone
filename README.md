@@ -21,10 +21,6 @@ Instead, a callback based API (like http server handler) is used for both server
 - Server and Client API
 - Server and Client Tester (examples/memory)
 
-## Future
-- Floating point support
-- TCP (maybe)
-
 ## Development
 
 This project is mostly stable, and I am using it in production.
