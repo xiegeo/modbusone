@@ -10,7 +10,7 @@ type SerialContext interface {
 	io.ReadWriteCloser
 	//RTUMinDelay returns the minimum required delay between packets for framing
 	MinDelay() time.Duration
-	//RTUBytesDelay returns the duration is takes to send n bytes
+	//RTUBytesDelay returns the duration it takes to send n bytes
 	BytesDelay(n int) time.Duration
 	//Stats reporting
 	Stats() *Stats
