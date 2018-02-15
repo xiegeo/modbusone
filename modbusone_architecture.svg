@@ -1,0 +1,79 @@
+<svg width="600" height="350" viewBox="0 0 600 350"
+    xmlns="http://www.w3.org/2000/svg">
+
+<style type="text/css" ><![CDATA[
+	rect {
+		stroke: #000;
+		fill:   #888;
+	}
+	.app {
+		fill: #0a0
+	}
+	.lib {
+		fill: #fff
+	}
+	.req {
+		fill: #ff8
+	}
+]]></style>
+<rect x="0" y="0" width="100%" height="100%"  rx="15" ry="15"/>
+
+<rect class="app" x="10" y="10" width="580" height="30" />
+	<text x="15" y="30">Application Code (sets handlers, and calls Start Transaction if on Client)</text>
+
+<g transform="translate(10,50)">
+<rect class="lib" width="440" height="80" /> 
+	<text>
+		<tspan x="5" dy="20">Protocal Handlers:</tspan>
+		<tspan x="15" dy="15">.ReadDiscreteInputs(address, quantity uint16) ([]bool, error)</tspan>
+		<tspan x="15" dy="15">.WriteHoldingRegisters(address uint16, values []uint16) error</tspan>
+		<tspan x="15" dy="15">etc ... as provided by SimpleHandler</tspan>
+	</text>          	   
+</g>
+	
+<g transform="translate(460,50)">
+	<rect class="lib" width="130" height="80" />
+	<text>
+		<tspan x="5" dy="20">Client Start</tspan>
+		<tspan x="5" dy="15">Transactions</tspan>
+		<tspan x="5" dy="15">(blocking and </tspan>
+		<tspan x="5" dy="15">non-block APIs)</tspan>
+	</text>
+</g>
+
+<g transform="translate(300,140)">
+	<text dy="10" text-anchor="middle">🡙 PDU (ProtocalHandler interface)</text>
+</g>
+
+<g transform="translate(10,160)">
+	<rect class="lib" width="285" height="30" />
+	<text x="5" y="20">RTUServer</text>
+</g>
+
+<g transform="translate(305,160)">
+	<rect class="lib" width="285" height="30" />
+	<text x="5" y="20">RTUClient</text>
+</g>
+
+<g transform="translate(300,200)">
+	<text dy="10" text-anchor="middle">🡙 RTU</text>
+</g>
+
+<g transform="translate(10,220)">
+	<rect class="lib" width="580" height="60" />
+	<text>
+		<tspan x="5" dy="20">SerialContext / PacketReader</tspan>
+		<tspan x="25" dy="15">Reads full packets, using read timing to recover in case packet length info was</tspan>
+		<tspan x="25" dy="15">corrupted! Other libraries do not do this, causing unrecoverable read errors. </tspan>
+	</text>
+</g>
+
+<g transform="translate(10,290)">
+	<rect class="req" width="580" height="50" />
+	<text>
+		<tspan x="5" dy="20">Any serial library for IO (any io.ReadWriteCloser)</tspan>
+		<tspan x="25" dy="15">such as /tarm/serial, /goburrow/serial</tspan>
+	</text>
+</g>
+
+</svg>	
