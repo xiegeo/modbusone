@@ -20,8 +20,6 @@ func (w writer) Write(p []byte) (n int, err error) {
 	return w(p)
 }
 
-var expectA = true //expect A to talk
-
 type counter struct {
 	*Stats
 	reads  int
@@ -98,7 +96,7 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	go serverB.Serve(shB)
 	go client.Serve(shC)
 
-	primaryActive = func() bool {
+	primaryActiveServer = func() bool {
 		if sa.isActive {
 			return true
 		}
@@ -111,9 +109,9 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 }
 
 //return if primary is active, or set it to active is not already
-var primaryActive func() bool
+var primaryActiveServer func() bool
 
-func TestFailback(t *testing.T) {
+func TestFailbackServer(t *testing.T) {
 	id := byte(0x77)
 	client, countA, countB, countC := connectToMockServers(id)
 	exCount := counter{Stats: &Stats{}}
@@ -151,12 +149,12 @@ func TestFailback(t *testing.T) {
 			//activates server
 			DoTransactions(client, id, reqs)
 		}
-		if !primaryActive() {
+		if !primaryActiveServer() {
 			t.Fatal("primaray servers should be active")
 		}
 		resetCounts()
 	})
-	primaryActive()
+	primaryActiveServer()
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {

@@ -65,14 +65,7 @@ func NewFailbackConn(sc SerialContext, isFailback, isServer bool) *FailbackSeria
 	return c
 }
 
-//Read reads the serial port
-func (s *FailbackSerialConn) Read(b []byte) (int, error) {
-	defer func() {
-		s.lastRead = tnow()
-	}()
-	if !s.isServer {
-		return 0, errors.New("todo client failback")
-	}
+func (s *FailbackSerialConn) serverRead(b []byte) (int, error) {
 	for {
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
@@ -153,6 +146,26 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 		}
 		return n, errors.New("assert deadcode at end of read")
 	}
+}
+
+func (s *FailbackSerialConn) clientRead(b []byte) (int, error) {
+	for {
+		n, err := s.PacketReader.Read(b)
+		if err != nil {
+			return n, err
+		}
+		
+	}
+}
+//Read reads the serial port
+func (s *FailbackSerialConn) Read(b []byte) (int, error) {
+	defer func() {
+		s.lastRead = tnow()
+	}()
+	if s.isServer {
+		return s.serverRead(b)
+	}
+	return s.clientRead(b)
 }
 
 func (s *FailbackSerialConn) Write(b []byte) (int, error) {
