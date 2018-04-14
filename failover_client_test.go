@@ -20,8 +20,8 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailbackConn(newMockSerial(ra, wfa), false, true) //client a connection
-	cb := NewFailbackConn(newMockSerial(rb, wfb), true, true)  //client b connection
+	ca := NewFailoverConn(newMockSerial(ra, wfa), false, true) //client a connection
+	cb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //client b connection
 	sc := newMockSerial(rc, wfc)                               //server connection
 
 	clientA := NewRTUCLient(ca, slaveID)
@@ -63,7 +63,7 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 //return if primary is active, or set it to active is not already
 var primaryActiveClient func() bool
 
-func TestFailbackClient(t *testing.T) {
+func TestFailoverClient(t *testing.T) {
 	id := byte(0x77)
 	clientA, clientB, countA, countB, countC := connectMockClients(id)
 	exCount := counter{Stats: &Stats{}}

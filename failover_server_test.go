@@ -69,8 +69,8 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailbackConn(newMockSerial(ra, wfa), false, true) //server a connection
-	sb := NewFailbackConn(newMockSerial(rb, wfb), true, true)  //server b connection
+	sa := NewFailoverConn(newMockSerial(ra, wfa), false, true) //server a connection
+	sb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //server b connection
 	cc := newMockSerial(rc, wfc)                               //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
@@ -111,7 +111,7 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 //return if primary is active, or set it to active is not already
 var primaryActiveServer func() bool
 
-func TestFailbackServer(t *testing.T) {
+func TestFailoverServer(t *testing.T) {
 	id := byte(0x77)
 	client, countA, countB, countC := connectToMockServers(id)
 	exCount := counter{Stats: &Stats{}}

@@ -9,17 +9,17 @@ import (
 var tnow = time.Now //allows for testing with fake time
 
 var SecondaryDelay = time.Second / 10
-var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary to detect failback
+var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary to detect an active failover
 
-//FailbackSerialConn manages a failback connection, which does failback using
+//FailoverSerialConn manages a failover connection, which does failover using
 //shared serial bus and shared slaveId. Slaves using other ids on the same
 //bus is not supported. If the other side supports multiple slave ids, then
-//it is best to implement failback on the other side using slaveId method.
-type FailbackSerialConn struct {
+//it is best to implement failover on the other side by call different slaveIds.
+type FailoverSerialConn struct {
 	SerialContext //base SerialContext
 	PacketReader
 	isServer   bool //client or server
-	isFailback bool //primary or failback
+	isFailover bool //primary or failover
 	isActive   bool //active or passive
 
 	requestTime time.Time //time of the last packet observed passively
@@ -31,7 +31,7 @@ type FailbackSerialConn struct {
 	//default 10 seconds
 	PrimaryDisconnectDelay time.Duration
 
-	//when a failback is running,
+	//when a failover is running,
 	//how long should it wait to take over again.
 	//default 10 mins
 	PrimaryForceBackDelay time.Duration
@@ -47,31 +47,31 @@ type FailbackSerialConn struct {
 	clientLastMessage time.Time
 }
 
-//NewFailbackServerlConn adds failback funtion to a SerialContext
-func NewFailbackConn(sc SerialContext, isFailback, isServer bool) *FailbackSerialConn {
-	c := &FailbackSerialConn{
+//NewFailoverServerlConn adds failover funtion to a SerialContext
+func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSerialConn {
+	c := &FailoverSerialConn{
 		SerialContext:          sc,
 		isServer:               isServer,
-		isFailback:             isFailback,
+		isFailover:             isFailover,
 		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
 		startTime:              tnow(),
 		ServerMissesMax:        3,
 	}
-	if isFailback {
+	if isFailover {
 		c.ServerMissesMax += 2
 	}
 	c.PacketReader = NewRTUBidirectionalPacketReader(c.SerialContext)
 	return c
 }
 
-func (s *FailbackSerialConn) serverRead(b []byte) (int, error) {
+func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 	for {
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
 			return n, err
 		}
-		if !s.isFailback {
+		if !s.isFailover {
 			if !s.isActive {
 				if s.startTime.Add(s.PrimaryForceBackDelay).Before(tnow()) {
 					debugf("force active of primary/n")
@@ -92,7 +92,7 @@ func (s *FailbackSerialConn) serverRead(b []byte) (int, error) {
 		rtu := RTU(b[:n])
 		pdu, err := rtu.GetPDU()
 		if err != nil {
-			debugf("failback internal GetPDU error : %v", err)
+			debugf("failover internal GetPDU error : %v", err)
 			return n, nil //bubbles formate up errors
 		}
 		if rtu[0] == 0 {
@@ -101,8 +101,8 @@ func (s *FailbackSerialConn) serverRead(b []byte) (int, error) {
 			return n, nil
 		}
 		if s.isActive {
-			if !s.isFailback {
-				return 0, errors.New("assert isFailback")
+			if !s.isFailover {
+				return 0, errors.New("assert isFailover")
 			}
 			//are we getting interrupted?
 			if s.requestTime.IsZero() {
@@ -148,17 +148,18 @@ func (s *FailbackSerialConn) serverRead(b []byte) (int, error) {
 	}
 }
 
-func (s *FailbackSerialConn) clientRead(b []byte) (int, error) {
+func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 	for {
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
 			return n, err
 		}
-		
+
 	}
 }
+
 //Read reads the serial port
-func (s *FailbackSerialConn) Read(b []byte) (int, error) {
+func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 	defer func() {
 		s.lastRead = tnow()
 	}()
@@ -168,9 +169,9 @@ func (s *FailbackSerialConn) Read(b []byte) (int, error) {
 	return s.clientRead(b)
 }
 
-func (s *FailbackSerialConn) Write(b []byte) (int, error) {
+func (s *FailoverSerialConn) Write(b []byte) (int, error) {
 	if s.isActive {
-		if s.isFailback {
+		if s.isFailover {
 			time.Sleep(SecondaryDelay + s.BytesDelay(len(b)))
 			if !s.isActive {
 				goto endActive
@@ -180,16 +181,16 @@ func (s *FailbackSerialConn) Write(b []byte) (int, error) {
 		return s.SerialContext.Write(b)
 	}
 endActive:
-	debugf("FailbackSerialConn ignore Write:%x\n", b)
+	debugf("FailoverSerialConn ignore Write:%x\n", b)
 	return len(b), nil
 }
 
-func (s *FailbackSerialConn) resetRequestTime() {
+func (s *FailoverSerialConn) resetRequestTime() {
 	s.requestTime = time.Time{} //zero time
 	s.reqPacket.Reset()
 }
 
-func (s *FailbackSerialConn) setLastReqTime(pdu PDU, now time.Time) {
+func (s *FailoverSerialConn) setLastReqTime(pdu PDU, now time.Time) {
 	s.requestTime = now
 	s.reqPacket.Reset()
 	s.reqPacket.Write(pdu)
