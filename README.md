@@ -41,6 +41,10 @@ My primary usage is RTU (over RS-485). Others may or may not be implemented in t
 Contribution to new or existing functionally, or just changing a private identifier public are welcome, as well as documentation, test, example code or any other improvements. 
 
 ## Breaking Changes
+
+TBA (failover development branch): 
+    NewRTUPacketReader returns PacketReader interface instead of io.Reader. When a new RTU server or client receives a SerialContext, it will test if it is also a PacketReader, and only create a new NewRTUPacketReader if not.
+
 2017-06-13
     Removed dependency on goburrow/serial. All serial connections should be created with NewSerialContext, which can accept any ReadWriteCloser
 
@@ -48,22 +52,22 @@ Contribution to new or existing functionally, or just changing a private identif
 
 Packet separation uses a mix of length and timing indications. Length is used
 if CRC is valid, otherwise timing indications is used to find where the next 
-packet starts.
+packet starts. (good)
 
-Compatibility with wide range of serial hardware/drivers.
+Compatibility with wide range of serial hardware/drivers. (good)
 
-Compatibility with different existing Modbus environments. (needs more testing)
+Compatibility with different existing Modbus environments. (good)
 
-Recover from transmission errors and timeouts, to work continuously unattended. (needs more testing)
+Recover from transmission errors and timeouts, to work continuously unattended. (good)
 
-Fuzz testing against crashes.
+Fuzz testing. (todo) 
 
 ## Failover mode
 In mission critical applications, or anywhere hardware redundancy is cheaper than downtime, having a standby system taking over in case of the failure of the primary system is desirable.
 
 Ideally, failover is implemented in the application level, which speaks over two serial ports simultaneously, only acting on the values from one of the ports at a time. But this may not be always possible. A "foreign" application, which you have no control over, might not have this feature. As such, failover mode attempts to addresses this by allowing two separate hardware devices sharing a single serial bus to appear as a single device. This failover mode is outside the design of the original Modbus protocol.
 
-The basic operation of failover mode is to stay quite on the port until the primary fails. While staying quite, it relays all read and writes to the application side as if it is the primary. This allows the application to stay in sync for a hot switchover when the primary fails.
+The basic operation of failover mode is to stay quite on the port until the primary fails. While staying quite, it relays all reads and writes to the application side as if it is the primary. This allows the application to stay in sync for a hot switch over when the primary fails. While on stand by and in Client (Master) mode, writes many be received by the handler that is not initiated by that Client.
 
 ## Definitions
 
