@@ -79,7 +79,7 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			continue
 		}
 		if r[0] != 0 && r[0] != s.SlaveID {
-			s.com.Stats().IdDrops++
+			s.com.Stats().IDDrops++
 			debugf("RTUServer drop packet to other id:%v\n", r[0])
 			continue
 		}

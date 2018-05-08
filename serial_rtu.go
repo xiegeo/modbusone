@@ -36,6 +36,7 @@ func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
 }
 
+//ErrorCrc indicates data corruption detected by checking the CRC
 var ErrorCrc = fmt.Errorf("RTU data crc not valid")
 
 //GetPDU returns the PDU inside, CRC is checked.

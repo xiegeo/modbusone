@@ -159,7 +159,7 @@ func (c *RTUClient) Serve(handler ProtocalHandler) error {
 					}
 				}
 				if react.data[0] != act.data[0] {
-					c.com.Stats().IdDrops++
+					c.com.Stats().IDDrops++
 					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
 					break SELECT
 				}

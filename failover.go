@@ -26,7 +26,7 @@ type FailoverSerialConn struct {
 	reqPacket   bytes.Buffer
 	lastRead    time.Time
 
-	//if primary has not recived data for this long, it thinks it's disconnected
+	//if primary has not received data for this long, it thinks it's disconnected
 	//and go passive, just like at restart
 	//default 10 seconds
 	PrimaryDisconnectDelay time.Duration
@@ -42,12 +42,12 @@ type FailoverSerialConn struct {
 	ServerMissesMax int
 	serverMisses    int
 
-	//how long untill the primary client is detected as down
+	//how long until the primary client is detected as down
 	ClientMissing     time.Duration
 	clientLastMessage time.Time
 }
 
-//NewFailoverServerlConn adds failover funtion to a SerialContext
+//NewFailoverConn adds failover function to a SerialContext
 func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
 		SerialContext:          sc,
@@ -196,6 +196,7 @@ func (s *FailoverSerialConn) setLastReqTime(pdu PDU, now time.Time) {
 	s.reqPacket.Write(pdu)
 }
 
+//IsRequestReply test if PDUs are a request reply pair, useful for lessening to transactions passively.
 func IsRequestReply(r, a PDU) bool {
 	debugf("IsRequestReply %x %x\n", r, a)
 	if r.GetFunctionCode() != a.GetFunctionCode() {

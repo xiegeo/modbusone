@@ -29,18 +29,20 @@ type Stats struct {
 	OtherErrors      int64
 	LongReadWarnings int64
 	FormateWarnings  int64
-	IdDrops          int64
+	IDDrops          int64
 	OtherDrops       int64
 }
 
+//Reset the stats to zero
 func (s *Stats) Reset() {
 	*s = Stats{}
 }
 
+//TotalDrops adds up all the errors for the total number of read packes dropped
 func (s *Stats) TotalDrops() int64 {
 	return s.CrcErrors + s.RemoteErrors + s.OtherErrors +
 		s.LongReadWarnings + s.FormateWarnings +
-		s.IdDrops + s.OtherDrops
+		s.IDDrops + s.OtherDrops
 }
 
 //NewSerialContext creates a SerialContext from any io.ReadWriteCloser

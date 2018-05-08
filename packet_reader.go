@@ -10,9 +10,10 @@ import (
 
 var _ = rand.Int63n
 
+//PacketReader signals that this reader returns full ADU packets
 type PacketReader interface {
 	io.Reader
-	PacketReaderFace() //signals that this reader returns full packets
+	PacketReaderFace()
 }
 
 type rtuPacketReader struct {

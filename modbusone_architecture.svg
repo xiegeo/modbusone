@@ -24,7 +24,7 @@
 <g transform="translate(10,50)">
 <rect class="lib" width="440" height="80" /> 
 	<text>
-		<tspan x="5" dy="20">Protocal Handlers:</tspan>
+		<tspan x="5" dy="20">Protocol Handlers:</tspan>
 		<tspan x="15" dy="15">.ReadDiscreteInputs(address, quantity uint16) ([]bool, error)</tspan>
 		<tspan x="15" dy="15">.WriteHoldingRegisters(address uint16, values []uint16) error</tspan>
 		<tspan x="15" dy="15">etc ... as provided by SimpleHandler</tspan>
