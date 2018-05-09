@@ -41,7 +41,7 @@ func TestHandler(t *testing.T) {
 	cc := newMockSerial(r2, w1) //client connection
 	sc := newMockSerial(r1, w2) //server connection
 
-	client := NewRTUCLient(cc, slaveID)
+	client := NewRTUClient(cc, slaveID)
 	server := NewRTUServer(sc, slaveID)
 
 	subtest := t

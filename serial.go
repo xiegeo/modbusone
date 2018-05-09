@@ -38,7 +38,7 @@ func (s *Stats) Reset() {
 	*s = Stats{}
 }
 
-//TotalDrops adds up all the errors for the total number of read packes dropped
+//TotalDrops adds up all the errors for the total number of read packets dropped
 func (s *Stats) TotalDrops() int64 {
 	return s.CrcErrors + s.RemoteErrors + s.OtherErrors +
 		s.LongReadWarnings + s.FormateWarnings +
@@ -78,7 +78,7 @@ func (s *serial) Stats() *Stats {
 	return &s.s
 }
 
-//MinDelay returns the minum Delay of 3.5 bytes between packets or 1750 mircos
+//MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 mircos
 func MinDelay(baudRate int64) time.Duration {
 	delay := 1750 * time.Microsecond
 	br := time.Duration(baudRate)

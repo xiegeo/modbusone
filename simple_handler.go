@@ -8,9 +8,9 @@ import (
 //this error shows the error is locally generated, not a remote ExceptionCode.
 var ErrFcNotSupported = errors.New("this FunctionCode is not supported")
 
-var _ ProtocalHandler = &SimpleHandler{}
+var _ ProtocolHandler = &SimpleHandler{} //assert implents
 
-//SimpleHandler implements ProtocalHandler, any nil function returns ErrFcNotSupported
+//SimpleHandler implements ProtocolHandler, any nil function returns ErrFcNotSupported
 type SimpleHandler struct {
 
 	//ReadDiscreteInputs handles server side FC=2

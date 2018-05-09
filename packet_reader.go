@@ -17,10 +17,10 @@ type PacketReader interface {
 }
 
 type rtuPacketReader struct {
-	r           SerialContext //the underlining reader
-	isClient    bool
-	bidirection bool
-	last        []byte
+	r             SerialContext //the underlining reader
+	isClient      bool
+	bidirectional bool
+	last          []byte
 }
 
 //NewRTUPacketReader create a Reader that attempt to read full packets.
@@ -47,7 +47,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		} else {
 			//time.Sleep(time.Duration(rand.Int63n(int64(time.Second))))
 			n, err := s.r.Read(p[read:])
-			debugf("RTUPacketReader read (%v+%v)/%v %v, expcted %v", read, n, len(p), err, expected)
+			debugf("RTUPacketReader read (%v+%v)/%v %v, expected %v", read, n, len(p), err, expected)
 			read += n
 			if err != nil || read == len(p) {
 				return read, err
@@ -58,8 +58,8 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			continue
 		}
 		//lets see if there is more to read
-		if s.bidirection {
-			expected = GetRTUBidirectionSizeFromHeader(p[:read])
+		if s.bidirectional {
+			expected = GetRTUBidirectionalSizeFromHeader(p[:read])
 			debugf("RTUPacketReader new expected size %v %x", expected, p[:read])
 		} else {
 			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
@@ -130,9 +130,16 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
 
-//GetRTUBidirectionSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
-//by checking the hash for disambiguation.
+//GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader
+//
+// Deprecated: misspelling
 func GetRTUBidirectionSizeFromHeader(header []byte) int {
+	return GetRTUBidirectionalSizeFromHeader(header)
+}
+
+//GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
+//by checking the crc for disambiguation of length.
+func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	s := GetRTUSizeFromHeader(header, false)
 	l := GetRTUSizeFromHeader(header, true)
 	if s == l {

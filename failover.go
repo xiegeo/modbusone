@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-var tnow = time.Now //allows for testing with fake time
-
 var SecondaryDelay = time.Second / 10
 var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary to detect an active failover
 
@@ -55,7 +53,7 @@ func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSeria
 		isFailover:             isFailover,
 		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
-		startTime:              tnow(),
+		startTime:              time.Now(),
 		ServerMissesMax:        3,
 	}
 	if isFailover {
@@ -73,16 +71,16 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 		}
 		if !s.isFailover {
 			if !s.isActive {
-				if s.startTime.Add(s.PrimaryForceBackDelay).Before(tnow()) {
+				if s.startTime.Add(s.PrimaryForceBackDelay).Before(time.Now()) {
 					debugf("force active of primary/n")
 					s.isActive = true
 				}
 			}
 			if s.isActive {
-				if s.lastRead.Add(s.PrimaryDisconnectDelay).Before(tnow()) {
+				if s.lastRead.Add(s.PrimaryDisconnectDelay).Before(time.Now()) {
 					debugf("primary was disconnected for too long/n")
 					s.isActive = false
-					s.startTime = tnow()
+					s.startTime = time.Now()
 				} else {
 					return n, nil
 				}
@@ -107,7 +105,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			//are we getting interrupted?
 			if s.requestTime.IsZero() {
 				//this should be a client request
-				s.setLastReqTime(pdu, tnow()) //reset is called on write
+				s.setLastReqTime(pdu, time.Now()) //reset is called on write
 				return n, nil
 			}
 			//yes
@@ -119,7 +117,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 
 		} else {
 			//we are passive here
-			now := tnow()
+			now := time.Now()
 			if s.requestTime.IsZero() {
 				s.setLastReqTime(pdu, now)
 				return n, nil
@@ -144,7 +142,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			s.setLastReqTime(pdu, now)
 			return n, nil
 		}
-		return n, errors.New("assert deadcode at end of read")
+		//return n, errors.New("assert deadcode at end of read")
 	}
 }
 
@@ -161,7 +159,7 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 //Read reads the serial port
 func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 	defer func() {
-		s.lastRead = tnow()
+		s.lastRead = time.Now()
 	}()
 	if s.isServer {
 		return s.serverRead(b)

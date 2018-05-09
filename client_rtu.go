@@ -8,7 +8,7 @@ import (
 )
 
 //RTUClient implements Client/Master side logic for RTU over a SerialContext to
-//be used by a ProtocalHandler
+//be used by a ProtocolHandler
 type RTUClient struct {
 	com                  SerialContext
 	packetReader         PacketReader
@@ -20,9 +20,16 @@ type RTUClient struct {
 //RTUClient is a Server
 var _ Server = &RTUClient{}
 
-//NewRTUCLient create a new client communicating over SerialContext with the
-//give slaveID as default.
+//NewRTUCLient is an miscapitalization of NewRTUClient
+//
+// Deprecated: miscapitalization
 func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
+	return NewRTUClient(com, slaveID)
+}
+
+//NewRTUClient create a new client communicating over SerialContext with the
+//give slaveID as default.
+func NewRTUClient(com SerialContext, slaveID byte) *RTUClient {
 	pr, ok := com.(PacketReader)
 	if !ok {
 		pr = NewRTUPacketReader(com, true)
@@ -83,7 +90,7 @@ func (a clientActionType) String() string {
 
 //Serve serves RTUClient side handlers, must close SerialContext after error is
 //returned, to clean up.
-func (c *RTUClient) Serve(handler ProtocalHandler) error {
+func (c *RTUClient) Serve(handler ProtocolHandler) error {
 	delay := c.com.MinDelay()
 
 	go func() {

@@ -14,7 +14,7 @@ const MaxPDUSize = 253
 
 //OverSizeSupport ignores max packet size and encoded number of bytes to support
 //over sided implementations encountered in the wild. This setting only applies
-//to the server end, since client is always reserved in what it requestes.
+//to the server end, since client is always reserved in what it requests.
 //Also change OverSizeMaxRTU properly
 var OverSizeSupport = false
 

@@ -10,7 +10,7 @@ import (
 )
 
 //RTUServer implements Server/Slave side logic for RTU over a SerialContext to
-//be used by a ProtocalHandler
+//be used by a ProtocolHandler
 type RTUServer struct {
 	com          SerialContext
 	packetReader PacketReader
@@ -34,7 +34,7 @@ func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 //Serve runs the server and only returns after unrecoverable error, such as
 //SerialContext is closed. Read is assumed to only read full packets,
 //as per RTU delay based spec.
-func (s *RTUServer) Serve(handler ProtocalHandler) error {
+func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	delay := s.com.MinDelay()
 
 	var rb []byte
@@ -46,24 +46,24 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 
 	var p PDU
 
-	var ioerr error //make continue do io error checking
+	var ioErr error //make continue do io error checking
 	wp := func(pdu PDU, slaveId byte) {
 		if slaveId == 0 {
 			return
 		}
 		time.Sleep(delay)
-		_, ioerr = s.com.Write(MakeRTU(slaveId, pdu))
+		_, ioErr = s.com.Write(MakeRTU(slaveId, pdu))
 	}
 	wec := func(err error, slaveId byte) {
 		wp(ExceptionReplyPacket(p, ToExceptionCode(err)), slaveId)
 	}
 
-	for ioerr == nil {
+	for ioErr == nil {
 		var n int
 		debugf("RTUServer wait for read\n")
-		n, ioerr = s.packetReader.Read(rb)
-		if ioerr != nil {
-			return ioerr
+		n, ioErr = s.packetReader.Read(rb)
+		if ioErr != nil {
+			return ioErr
 		}
 		r := RTU(rb[:n])
 		debugf("RTUServer read packet:%v\n", hex.EncodeToString(r))
@@ -118,11 +118,11 @@ func (s *RTUServer) Serve(handler ProtocalHandler) error {
 			wp(p.MakeWriteReply(), r[0])
 		}
 	}
-	return ioerr
+	return ioErr
 }
 
 //Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
-//See also flag.Uint64 and strcov.ParseUint
+//See also flag.Uint64 and strconv.ParseUint
 func Uint64ToSlaveID(n uint64) (byte, error) {
 	if n > 247 {
 		return 0, errors.New("slaveID must be less than 248")
@@ -140,7 +140,7 @@ func debugf(format string, a ...interface{}) {
 	}
 	debugLock.Lock()
 	defer debugLock.Unlock()
-	fmt.Fprintf(DebugOut, "[%s]", tnow().Format("06-01-02 15:04:05.000000"))
+	fmt.Fprintf(DebugOut, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
 	fmt.Fprintf(DebugOut, format, a...)
 	lf := len(format)
 	if lf > 0 && format[lf-1] != '\n' {

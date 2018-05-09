@@ -8,14 +8,19 @@ import (
 	"fmt"
 )
 
-//Server is the common interface for all Clients and Servers that use ProtocalHandlers
+//Server is the common interface for all Clients and Servers that use ProtocolHandlers
 type Server interface {
-	Serve(handler ProtocalHandler) error
+	Serve(handler ProtocolHandler) error
 }
 
-//ProtocalHandler handles PDUs based on if it is a write or read from the local
+//ProtocalHandler is a misspelling of ProtocolHandler
+//
+// Deprecated: misspelling
+type ProtocalHandler = ProtocolHandler
+
+//ProtocolHandler handles PDUs based on if it is a write or read from the local
 //perspective.
-type ProtocalHandler interface {
+type ProtocolHandler interface {
 	//OnInput is called on the server for a write request,
 	//or on the client for read reply.
 	//For write to server on server side, data is part of req.
@@ -24,7 +29,7 @@ type ProtocalHandler interface {
 	OnWrite(req PDU, data []byte) error
 
 	//OnOutput is called on the server for a read request,
-	//or on the client before write requst.
+	//or on the client before write request.
 	//For read from server on the server side, req is from client and data is
 	//part of reply.
 	//For write to server on the client side, req is from local action
@@ -335,7 +340,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		return nil, err
 	}
 	l := int(count)
-	// check if start + count is highter than max range
+	// check if start + count is higher than max range
 	if l+int(p.GetAddress()) > int(p.GetFunctionCode().MaxRange()) {
 		debugf("address out of range")
 		return nil, EcIllegalDataAddress

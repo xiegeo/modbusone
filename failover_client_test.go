@@ -24,8 +24,8 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 	cb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //client b connection
 	sc := newMockSerial(rc, wfc)                               //server connection
 
-	clientA := NewRTUCLient(ca, slaveID)
-	clientB := NewRTUCLient(cb, slaveID)
+	clientA := NewRTUClient(ca, slaveID)
+	clientB := NewRTUClient(cb, slaveID)
 	server := NewRTUServer(sc, slaveID)
 
 	//faster timeouts during testing
