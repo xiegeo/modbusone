@@ -1,6 +1,7 @@
 package modbusone
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ type RTUClient struct {
 	SlaveID              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
+	SkipTransactionCheck bool //allow observing transactions for failover mode, all started transactions always success as long as port is writeable.
 }
 
 //RTUClient is a Server
@@ -91,7 +93,6 @@ func (a clientActionType) String() string {
 //Serve serves RTUClient side handlers, must close SerialContext after error is
 //returned, to clean up.
 func (c *RTUClient) Serve(handler ProtocolHandler) error {
-	delay := c.com.MinDelay()
 
 	go func() {
 		//Reader loop that always ready to received data. This make sure that read
@@ -111,12 +112,57 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 		}
 	}()
 
+	var last bytes.Buffer
+	readUnexpected := func(act rtuAction, otherwise func()) {
+		if !c.SkipTransactionCheck || act.err != nil || act.t != clientRead || len(act.data) == 0 {
+			debugf("do not hand unexpected: %v", act)
+			otherwise()
+			return
+		}
+		debugf("handling unexpected: %v", act)
+		pdu, err := act.data.GetPDU()
+		if err != nil {
+			debugf("readUnexpected GetPDU error: %v", err)
+			otherwise()
+			return
+		}
+		if !IsRequestReply(last.Bytes(), pdu) {
+			if last.Len() != 0 {
+				c.com.Stats().OtherDrops++
+			}
+			last.Reset()
+			last.Write(pdu)
+			return
+		}
+		defer last.Reset()
+
+		if pdu.GetFunctionCode().IsWriteToServer() {
+			//no-op for us
+			return
+		}
+
+		bs, err := pdu.GetReplyValues()
+		if err != nil {
+			debugf("readUnexpected GetReplyValues error: %v", err)
+			otherwise()
+			return
+		}
+		err = handler.OnWrite(last.Bytes(), bs)
+		if err != nil {
+			debugf("readUnexpected OnWrite error: %v", err)
+			otherwise()
+			return
+		}
+	}
+
 	for {
 		act := <-c.actions
 		switch act.t {
 		default:
-			c.com.Stats().OtherDrops++
-			debugf("RTUClient drop unexpected: %v", act)
+			readUnexpected(act, func() {
+				c.com.Stats().OtherDrops++
+				debugf("RTUClient drop unexpected: %v", act)
+			})
 			continue
 		case clientError:
 			return act.err
@@ -133,15 +179,18 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 			act.data = MakeRTU(act.data[0], ap.MakeWriteRequest(data))
 			ap = act.data.fastGetPDU()
 		}
-		time.Sleep(delay)
+		time.Sleep(c.com.MinDelay())
 		_, err := c.com.Write(act.data)
 		if err != nil {
 			act.errChan <- err
 			return err
 		}
-		if act.data[0] == 0 {
-			continue // do not wait for read on multicast
+		if act.data[0] == 0 || c.SkipTransactionCheck {
+			time.Sleep(c.com.BytesDelay(len(act.data)))
+			act.errChan <- nil //always success
+			continue           // do not wait for read on multicast or not checked mode
 		}
+
 		timeOutChan := time.After(c.GetTransactionTimeOut(len(act.data), MaxRTUSize))
 
 	READ_LOOP:
@@ -187,12 +236,12 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
-				if !MatchPDU(act.data.fastGetPDU(), rp) {
+				if !IsRequestReply(act.data.fastGetPDU(), rp) {
 					c.com.Stats().OtherErrors++
 					act.errChan <- fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
-				if !afc.IsWriteToServer() {
+				if afc.IsReadToServer() {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {

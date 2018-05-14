@@ -57,6 +57,11 @@ func newTestHandler(name string) ([]uint16, *SimpleHandler, *counter) {
 	return holdingRegisters[:], shA, &count
 }
 
+func setDelays(f *FailoverSerialConn) {
+	f.SecondaryDelay = time.Second / 100
+	f.MissDelay = time.Second / 50
+}
+
 func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counter) {
 
 	//pipes
@@ -75,12 +80,12 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
-	client := NewRTUCLient(cc, slaveID)
+	client := NewRTUClient(cc, slaveID)
 
 	//faster timeouts during testing
 	client.SetServerProcessingTime(time.Second / 10)
-	SecondaryDelay = time.Second / 100
-	MissDelay = time.Second / 50
+	setDelays(sa)
+	setDelays(sb)
 
 	_, shA, countA := newTestHandler("server A")
 	countA.Stats = sa.Stats()
@@ -101,7 +106,7 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 			return true
 		}
 		sa.isActive = true
-		sa.serverMisses = sa.ServerMissesMax
+		sa.misses = sa.MissesMax
 		return false
 	}
 
@@ -133,8 +138,8 @@ func TestFailoverServer(t *testing.T) {
 	}
 
 	_ = os.Stdout
-	//DebugOut = os.Stdout
-	defer func() { DebugOut = nil }()
+	//SetDebugOut(os.Stdout)
+	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)

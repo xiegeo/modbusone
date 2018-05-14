@@ -130,9 +130,18 @@ func Uint64ToSlaveID(n uint64) (byte, error) {
 	return byte(n), nil
 }
 
-//DebugOut sets where to print debug messages
+//DebugOut sets where to print debug messages.
+//
+//Deprecated: please use SetDebugOut instead.
 var DebugOut io.Writer
 var debugLock sync.Mutex
+
+//SetDebugOut to print debug messages, set to nil to turn off debug output.
+func SetDebugOut(w io.Writer) {
+	debugLock.Lock()
+	defer debugLock.Unlock()
+	DebugOut = w
+}
 
 func debugf(format string, a ...interface{}) {
 	if DebugOut == nil {
@@ -140,6 +149,9 @@ func debugf(format string, a ...interface{}) {
 	}
 	debugLock.Lock()
 	defer debugLock.Unlock()
+	if DebugOut == nil {
+		return
+	}
 	fmt.Fprintf(DebugOut, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
 	fmt.Fprintf(DebugOut, format, a...)
 	lf := len(format)

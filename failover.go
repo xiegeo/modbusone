@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-var SecondaryDelay = time.Second / 10
-var MissDelay = time.Second / 5 //must be bigger than SecondaryDelay for primary to detect an active failover
-
 //FailoverSerialConn manages a failover connection, which does failover using
 //shared serial bus and shared slaveId. Slaves using other ids on the same
 //bus is not supported. If the other side supports multiple slave ids, then
@@ -35,14 +32,18 @@ type FailoverSerialConn struct {
 	PrimaryForceBackDelay time.Duration
 	startTime             time.Time
 
-	//how many misses is the primary server is detected as down
-	//default 5
-	ServerMissesMax int
-	serverMisses    int
+	//SecondaryDelay is the delay to use on a secondary to give time for the primary to reply first.
+	//Default 0.1 seconds.
+	SecondaryDelay time.Duration
+	//MissDelay is the delay to use by the primary when passive to detect missed packets by secondary.
+	//It must be bigger than SecondaryDelay for primary to detect an active failover.
+	//Default 0.2 seconds.
+	MissDelay time.Duration
 
-	//how long until the primary client is detected as down
-	ClientMissing     time.Duration
-	clientLastMessage time.Time
+	//how many misses is the primary detected as down
+	//default 5
+	MissesMax int
+	misses    int
 }
 
 //NewFailoverConn adds failover function to a SerialContext
@@ -53,11 +54,13 @@ func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSeria
 		isFailover:             isFailover,
 		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
+		SecondaryDelay:         time.Second / 10,
+		MissDelay:              time.Second / 5,
 		startTime:              time.Now(),
-		ServerMissesMax:        3,
+		MissesMax:              3,
 	}
 	if isFailover {
-		c.ServerMissesMax += 2
+		c.MissesMax += 2
 	}
 	c.PacketReader = NewRTUBidirectionalPacketReader(c.SerialContext)
 	return c
@@ -90,8 +93,8 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 		rtu := RTU(b[:n])
 		pdu, err := rtu.GetPDU()
 		if err != nil {
-			debugf("failover internal GetPDU error : %v", err)
-			return n, nil //bubbles formate up errors
+			debugf("failover serverRead internal GetPDU error : %v", err)
+			return n, err //bubbles formate up errors
 		}
 		if rtu[0] == 0 {
 			//zero slave id do not have a reply, so we won't expect one
@@ -110,7 +113,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			}
 			//yes
 			s.isActive = false
-			s.serverMisses = 0
+			s.misses = 0
 			s.resetRequestTime()
 			debugf("primary found, going from active to passive")
 			continue //throw away and read again
@@ -122,9 +125,9 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				s.setLastReqTime(pdu, now)
 				return n, nil
 			}
-			if now.Sub(s.requestTime) > MissDelay+s.BytesDelay(n) {
-				s.serverMisses++
-				if s.serverMisses > s.ServerMissesMax {
+			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
+				s.misses++
+				if s.misses > s.MissesMax {
 					s.isActive = true
 				} else {
 					s.setLastReqTime(pdu, now)
@@ -132,7 +135,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 
-			s.serverMisses = 0
+			s.misses = 0
 			if IsRequestReply(s.reqPacket.Bytes(), pdu) {
 				s.resetRequestTime()
 				debugf("ignore read of reply from the other server")
@@ -152,7 +155,40 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 		if err != nil {
 			return n, err
 		}
+		s.misses = 0
+		now := time.Now()
 
+		rtu := RTU(b[:n])
+		pdu, err := rtu.GetPDU()
+		if err != nil {
+			debugf("failover clientRead internal GetPDU error : %v", err)
+			return n, err //bubbles formate up errors
+		}
+
+		isReply := now.Sub(s.requestTime) < s.MissDelay+s.BytesDelay(n) && IsRequestReply(s.reqPacket.Bytes(), pdu)
+
+		if !isReply {
+			s.setLastReqTime(pdu, now)
+			return n, nil // give requests so caller can match with replies
+		}
+
+		if rtu[0] == 0 {
+			//zero slave id do not have a reply, so we won't expect one
+			s.resetRequestTime()
+			isReply = false
+		}
+
+		if s.isActive {
+			if s.isFailover {
+				debugf("deactivates failover client")
+				s.isActive = false
+			}
+		}
+
+		if isReply {
+			s.resetRequestTime()
+			return n, nil
+		}
 	}
 }
 
@@ -168,9 +204,40 @@ func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 }
 
 func (s *FailoverSerialConn) Write(b []byte) (int, error) {
-	if s.isActive {
+	debugf("start write s %v, a %v, f %v\n", s.isServer, s.isActive, s.isFailover)
+	if !s.isServer {
+		now := time.Now()
+		if !s.isFailover {
+			if s.isActive {
+				if s.lastRead.Add(s.PrimaryDisconnectDelay).Before(now) {
+					debugf("primary was disconnected for too long for write to be safe\n")
+					s.isActive = false
+				}
+			}
+			if !s.isActive && s.startTime.Add(s.PrimaryForceBackDelay).Before(now) {
+				debugf("active server after PrimaryForceBackDelay passed\n")
+				s.isActive = true
+				s.startTime = now //push back the next force back
+			}
+		}
+
+		if !s.isActive {
+			if s.misses >= s.MissesMax {
+				debugf("activities client with %v misses\n", s.misses)
+				s.isActive = true
+			} else {
+				s.misses++
+				debugf("%v misses\n", s.misses)
+			}
+		}
+
+		if s.isActive {
+			s.setLastReqTime(RTU(b).fastGetPDU(), now)
+			return s.SerialContext.Write(b)
+		}
+	} else if s.isActive {
 		if s.isFailover {
-			time.Sleep(SecondaryDelay + s.BytesDelay(len(b)))
+			time.Sleep(s.SecondaryDelay + s.BytesDelay(len(b)))
 			if !s.isActive {
 				goto endActive
 			}

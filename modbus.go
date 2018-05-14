@@ -195,7 +195,7 @@ func (f FunctionCode) IsWriteToServer() bool {
 	return false
 }
 
-//IsReadToServer returns true if the FunctionCode is a write.
+//IsReadToServer returns true if the FunctionCode is a read.
 //FunctionCode 23 is both a read and write.
 func (f FunctionCode) IsReadToServer() bool {
 	switch f {
