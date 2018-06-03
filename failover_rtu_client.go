@@ -1,41 +1,39 @@
 package modbusone
 
 import (
+	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 )
 
 //RTUClient implements Client/Master side logic for RTU over a SerialContext to
 //be used by a ProtocolHandler
-type RTUClient struct {
-	com                  SerialContext
+type FailoverRTUClient struct {
+	com                  *FailoverSerialConn
 	packetReader         PacketReader
 	SlaveID              byte
 	serverProcessingTime time.Duration
 	actions              chan rtuAction
 }
 
-//RTUClient is a Server
-var _ Server = &RTUClient{}
+//FailoverRTUClient is also a Server
+var _ Server = &FailoverRTUClient{}
 
-//NewRTUCLient is an miscapitalization of NewRTUClient
-//
-// Deprecated: miscapitalization
-func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
-	return NewRTUClient(com, slaveID)
-}
-
-//NewRTUClient create a new client communicating over SerialContext with the
+//NewFailoverRTUClient create a new client with failover function communicating over SerialContext with the
 //give slaveID as default.
-func NewRTUClient(com SerialContext, slaveID byte) *RTUClient {
-	pr, ok := com.(PacketReader)
+//
+//If isFailover is true, it is the secondary.
+func NewFailoverRTUClient(com SerialContext, isFailover bool, slaveID byte) *FailoverRTUClient {
+	pr, ok := com.(*FailoverSerialConn)
 	if !ok {
-		pr = NewRTUPacketReader(com, true)
+		pr = NewFailoverConn(com, isFailover, true)
 	}
-	r := RTUClient{
-		com:                  com,
+	if pr.isFailover != isFailover {
+		panic("A SerialContext was provided with conflicting settings.")
+	}
+	r := FailoverRTUClient{
+		com:                  pr,
 		packetReader:         pr,
 		SlaveID:              slaveID,
 		serverProcessingTime: time.Second,
@@ -46,51 +44,25 @@ func NewRTUClient(com SerialContext, slaveID byte) *RTUClient {
 
 //SetServerProcessingTime sets the time to wait for a server response, the total
 //wait time also includes the time needed for data transmission
-func (c *RTUClient) SetServerProcessingTime(t time.Duration) {
+func (c *FailoverRTUClient) SetServerProcessingTime(t time.Duration) {
 	c.serverProcessingTime = t
 }
 
 //GetTransactionTimeOut returns the total time to wait for a transaction
 //(server response) to time out, given the expected length of RTU packets.
 //This function is also used internally to calculate timeout.
-func (c *RTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
+func (c *FailoverRTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
 	l := reqLen + ansLen
 	return c.com.BytesDelay(l) + c.serverProcessingTime
 }
 
-type rtuAction struct {
-	t       clientActionType
-	data    RTU
-	err     error
-	errChan chan<- error
-}
-
-//ErrServerTimeOut is the time out error for StartTransaction
-var ErrServerTimeOut = errors.New("server timed out")
-
-type clientActionType int
-
-const (
-	clientStart clientActionType = iota
-	clientRead
-	clientError
-)
-
-func (a clientActionType) String() string {
-	switch a {
-	case clientStart:
-		return "start"
-	case clientRead:
-		return "read"
-	case clientError:
-		return "error"
-	}
-	return fmt.Sprintf("clientActionType %d", a)
-}
-
-//Serve serves RTUClient side handlers, must close SerialContext after error is
+//Serve serves FailoverRTUClient side handlers, must close SerialContext after error is
 //returned, to clean up.
-func (c *RTUClient) Serve(handler ProtocolHandler) error {
+//
+//A FailoverRTUClient expects a lot of "unexpected" read packets and "lost" writes so it
+//is does not do the error checking that a normal client does, but insdead try to guess the best
+//interpretation.
+func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 
 	go func() {
 		//Reader loop that always ready to received data. This make sure that read
@@ -110,12 +82,57 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 		}
 	}()
 
+	var last bytes.Buffer
+	readUnexpected := func(act rtuAction, otherwise func()) {
+		if act.err != nil || act.t != clientRead || len(act.data) == 0 {
+			debugf("do not hand unexpected: %v", act)
+			otherwise()
+			return
+		}
+		debugf("handling unexpected: %v", act)
+		pdu, err := act.data.GetPDU()
+		if err != nil {
+			debugf("readUnexpected GetPDU error: %v", err)
+			otherwise()
+			return
+		}
+		if !IsRequestReply(last.Bytes(), pdu) {
+			if last.Len() != 0 {
+				c.com.Stats().OtherDrops++
+			}
+			last.Reset()
+			last.Write(pdu)
+			return
+		}
+		defer last.Reset()
+
+		if pdu.GetFunctionCode().IsWriteToServer() {
+			//no-op for us
+			return
+		}
+
+		bs, err := pdu.GetReplyValues()
+		if err != nil {
+			debugf("readUnexpected GetReplyValues error: %v", err)
+			otherwise()
+			return
+		}
+		err = handler.OnWrite(last.Bytes(), bs)
+		if err != nil {
+			debugf("readUnexpected OnWrite error: %v", err)
+			otherwise()
+			return
+		}
+	}
+
 	for {
 		act := <-c.actions
 		switch act.t {
 		default:
-			c.com.Stats().OtherDrops++
-			debugf("RTUClient drop unexpected: %v", act)
+			readUnexpected(act, func() {
+				c.com.Stats().OtherDrops++
+				debugf("RTUClient drop unexpected: %v", act)
+			})
 			continue
 		case clientError:
 			return act.err
@@ -138,10 +155,10 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 			act.errChan <- err
 			return err
 		}
-		if act.data[0] == 0 {
+		if act.data[0] == 0 || !c.com.isActive {
 			time.Sleep(c.com.BytesDelay(len(act.data)))
 			act.errChan <- nil //always success
-			continue           // do not wait for read on multicast
+			continue           // do not wait for read on multicast or when not active
 		}
 
 		timeOutChan := time.After(c.GetTransactionTimeOut(len(act.data), MaxRTUSize))
@@ -190,7 +207,9 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 					break READ_LOOP
 				}
 				if !IsRequestReply(act.data.fastGetPDU(), rp) {
-					c.com.Stats().OtherErrors++
+					readUnexpected(act, func() {
+						c.com.Stats().OtherDrops++
+					})
 					act.errChan <- fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
@@ -223,7 +242,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 //
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
-func (c *RTUClient) DoTransaction(req PDU) error {
+func (c *FailoverRTUClient) DoTransaction(req PDU) error {
 	errChan := make(chan error)
 	c.StartTransactionToServer(c.SlaveID, req, errChan)
 	return <-errChan
@@ -237,58 +256,6 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 //
 //For read from server, the PDU is sent as is (after been warped up in RTU)
 //For write to server, the data part given will be ignored, and filled in by data from handler.
-func (c *RTUClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
+func (c *FailoverRTUClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
 	c.actions <- rtuAction{t: clientStart, data: MakeRTU(slaveID, req), errChan: errChan}
-}
-
-//RTUTransactionStarter is an interface implemented by RTUClient.
-type RTUTransactionStarter interface {
-	StartTransactionToServer(slaveID byte, req PDU, errChan chan error)
-}
-
-//DoTransactions runs the reqs transactions in order.
-//If any error is encountered, it returns early and reports the index number and
-//error message
-func DoTransactions(c RTUTransactionStarter, slaveID byte, reqs []PDU) (int, error) {
-	errChan := make(chan error)
-	for i, r := range reqs {
-		c.StartTransactionToServer(slaveID, r, errChan)
-		err := <-errChan
-		if err != nil {
-			return i, err
-		}
-	}
-	return len(reqs), nil
-}
-
-//MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
-//into allowed sizes.
-//Returns an error if quantity is out of range.
-func MakePDURequestHeaders(fc FunctionCode, address, quantity uint16, appendTO []PDU) ([]PDU, error) {
-	return MakePDURequestHeadersSized(fc, address, quantity, fc.MaxPerPacket(), appendTO)
-}
-
-//MakePDURequestHeadersSized generates the list of PDU request headers by spliting quantity
-//into sizes of maxPerPacket or less.
-//Returns an error if quantity is out of range.
-//
-//You can use FunctionCode.MaxPerPacketSized to calculate one with the wanted byte length.
-func MakePDURequestHeadersSized(fc FunctionCode, address, quantity uint16, maxPerPacket uint16, appendTO []PDU) ([]PDU, error) {
-	if uint(address)+uint(quantity) > uint(fc.MaxRange()) {
-		return nil, fmt.Errorf("quantity is out of range")
-	}
-	q := maxPerPacket
-	for quantity > 0 {
-		if quantity < maxPerPacket {
-			q = quantity
-		}
-		pdu, err := fc.MakeRequestHeader(address, q)
-		if err != nil {
-			return nil, err
-		}
-		appendTO = append(appendTO, pdu)
-		address += q
-		quantity -= q
-	}
-	return appendTO, nil
 }

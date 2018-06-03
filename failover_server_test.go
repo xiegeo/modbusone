@@ -36,17 +36,17 @@ func (c counter) String() string {
 	return fmt.Sprintf("reads:%v writes:%v drops:%v", c.reads, c.writes, c.TotalDrops())
 }
 
-func newTestHandler(name string) ([]uint16, *SimpleHandler, *counter) {
+func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *counter) {
 	var holdingRegisters [100]uint16
 	count := counter{}
 	shA := &SimpleHandler{
 		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-			fmt.Printf("Read %s %v, quantity %v\n", name, address, quantity)
+			t.Logf("Read %s %v, quantity %v\n", name, address, quantity)
 			count.reads += int(quantity)
 			return holdingRegisters[address : address+quantity], nil
 		},
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
-			fmt.Printf("Write %s %v, quantity %v\n", name, address, len(values))
+			t.Logf("Write %s %v, quantity %v\n", name, address, len(values))
 			count.writes += len(values)
 			for i, v := range values {
 				holdingRegisters[address+uint16(i)] = v
@@ -62,7 +62,7 @@ func setDelays(f *FailoverSerialConn) {
 	f.MissDelay = time.Second / 50
 }
 
-func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counter) {
+func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *counter, *counter) {
 
 	//pipes
 	ra, wa := io.Pipe() //server a
@@ -74,9 +74,9 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial(ra, wfa), false, true) //server a connection
-	sb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //server b connection
-	cc := newMockSerial(rc, wfc)                               //client connection
+	sa := NewFailoverConn(newMockSerial(ra, wfa), false, false) //server a connection
+	sb := NewFailoverConn(newMockSerial(rb, wfb), true, false)  //server b connection
+	cc := newMockSerial(rc, wfc)                                //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
@@ -87,11 +87,11 @@ func connectToMockServers(slaveID byte) (*RTUClient, *counter, *counter, *counte
 	setDelays(sa)
 	setDelays(sb)
 
-	_, shA, countA := newTestHandler("server A")
+	_, shA, countA := newTestHandler("server A", t)
 	countA.Stats = sa.Stats()
-	_, shB, countB := newTestHandler("server B")
+	_, shB, countB := newTestHandler("server B", t)
 	countB.Stats = sb.Stats()
-	holdingRegistersC, shC, countC := newTestHandler("client")
+	holdingRegistersC, shC, countC := newTestHandler("client", t)
 	countC.Stats = cc.Stats()
 	for i := range holdingRegistersC {
 		holdingRegistersC[i] = uint16(i + 1<<8)
@@ -118,7 +118,7 @@ var primaryActiveServer func() bool
 
 func TestFailoverServer(t *testing.T) {
 	id := byte(0x77)
-	client, countA, countB, countC := connectToMockServers(id)
+	client, countA, countB, countC := connectToMockServers(t, id)
 	exCount := counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()

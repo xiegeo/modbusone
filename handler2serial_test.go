@@ -1,6 +1,7 @@
 package modbusone
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -13,17 +14,22 @@ var _ = os.Stdin
 
 type mockSerial struct {
 	io.Reader
-	io.Writer
+	*bufio.Writer
 	LastWritten []byte
 	s           Stats
 }
 
 func newMockSerial(r io.Reader, w io.Writer) *mockSerial {
-	return &mockSerial{Reader: r, Writer: w}
+	bw := bufio.NewWriterSize(w, MaxRTUSize)
+	return &mockSerial{Reader: r, Writer: bw}
 }
-func (s *mockSerial) Write(data []byte) (n int, err error) {
+func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
-	return s.Writer.Write(data)
+	n, err := s.Writer.Write(data)
+	if err == nil {
+		go s.Writer.Flush()
+	}
+	return n, err
 }
 func (s *mockSerial) Close() error                   { return nil }
 func (s *mockSerial) MinDelay() time.Duration        { return 0 }

@@ -13,7 +13,7 @@ import (
 type FailoverSerialConn struct {
 	SerialContext //base SerialContext
 	PacketReader
-	isServer   bool //client or server
+	isClient   bool //client or server
 	isFailover bool //primary or failover
 	isActive   bool //active or passive
 
@@ -47,10 +47,10 @@ type FailoverSerialConn struct {
 }
 
 //NewFailoverConn adds failover function to a SerialContext
-func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSerialConn {
+func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
 		SerialContext:          sc,
-		isServer:               isServer,
+		isClient:               isClient,
 		isFailover:             isFailover,
 		PrimaryDisconnectDelay: 3 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
@@ -64,6 +64,10 @@ func NewFailoverConn(sc SerialContext, isFailover, isServer bool) *FailoverSeria
 	}
 	c.PacketReader = NewRTUBidirectionalPacketReader(c.SerialContext)
 	return c
+}
+
+func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
+	return s.SerialContext.BytesDelay(n)
 }
 
 func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
@@ -197,15 +201,15 @@ func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 	defer func() {
 		s.lastRead = time.Now()
 	}()
-	if s.isServer {
-		return s.serverRead(b)
+	if s.isClient {
+		return s.clientRead(b)
 	}
-	return s.clientRead(b)
+	return s.serverRead(b)
 }
 
 func (s *FailoverSerialConn) Write(b []byte) (int, error) {
-	debugf("start write s %v, a %v, f %v\n", s.isServer, s.isActive, s.isFailover)
-	if !s.isServer {
+	debugf("start write c %v, a %v, f %v\n", s.isClient, s.isActive, s.isFailover)
+	if s.isClient {
 		now := time.Now()
 		if !s.isFailover {
 			if s.isActive {

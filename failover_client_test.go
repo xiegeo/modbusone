@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counter, *counter) {
+func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter) {
 
 	//pipes
 	ra, wa := io.Pipe() //client a
@@ -20,14 +20,12 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailoverConn(newMockSerial(ra, wfa), false, false) //client a connection
-	cb := NewFailoverConn(newMockSerial(rb, wfb), true, false)  //client b connection
-	sc := newMockSerial(rc, wfc)                                //server connection
+	ca := NewFailoverConn(newMockSerial(ra, wfa), false, true) //client a connection
+	cb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //client b connection
+	sc := newMockSerial(rc, wfc)                               //server connection
 
-	clientA := NewRTUClient(ca, slaveID)
-	clientA.SkipTransactionCheck = true
-	clientB := NewRTUClient(cb, slaveID)
-	clientB.SkipTransactionCheck = true
+	clientA := NewFailoverRTUClient(ca, false, slaveID)
+	clientB := NewFailoverRTUClient(cb, true, slaveID)
 	server := NewRTUServer(sc, slaveID)
 
 	//faster timeouts during testing
@@ -36,11 +34,11 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 	setDelays(ca)
 	setDelays(cb)
 
-	_, shA, countA := newTestHandler("client A")
+	_, shA, countA := newTestHandler("client A", t)
 	countA.Stats = ca.Stats()
-	_, shB, countB := newTestHandler("client B")
+	_, shB, countB := newTestHandler("client B", t)
 	countB.Stats = cb.Stats()
-	holdingRegistersC, shC, countC := newTestHandler("server")
+	holdingRegistersC, shC, countC := newTestHandler("server", t)
 	countC.Stats = sc.Stats()
 	for i := range holdingRegistersC {
 		holdingRegistersC[i] = uint16(i + 1<<8)
@@ -66,8 +64,12 @@ func connectMockClients(slaveID byte) (*RTUClient, *RTUClient, *counter, *counte
 var primaryActiveClient func() bool
 
 func TestFailoverClient(t *testing.T) {
+	//t.Skip()
+	//errorRate := 3  //number of failures allowed for fuzzyness of each test
+	//testCount := 20 //number of repeats of each test
+
 	id := byte(0x77)
-	clientA, clientB, countA, countB, countC := connectMockClients(id)
+	clientA, clientB, countA, countB, countC := connectMockClients(t, id)
 	exCount := counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()
@@ -83,26 +85,17 @@ func TestFailoverClient(t *testing.T) {
 	testCases := []tc{
 		{FcWriteSingleRegister, 20},
 		{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 20},
+		{FcReadHoldingRegisters, 5},
 	}
 
 	_ = os.Stdout
-	SetDebugOut(os.Stdout)
+	//SetDebugOut(os.Stdout)
 	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)
 		if err != nil {
 			t.Fatal(err)
-		}
-		_, err = DoTransactions(clientA, id, reqs)
-		if err == nil {
-			t.Fatal("cold start, not expecting any active clients")
-		}
-		t.Log("expected error:", err)
-		_, err = DoTransactions(clientB, id, reqs)
-		if err == nil {
-			t.Fatal("cold start, not expecting any active clients")
 		}
 		for i := 0; i < 5; /*MissesMax*/ i++ {
 			//activates client
@@ -112,6 +105,7 @@ func TestFailoverClient(t *testing.T) {
 		if !primaryActiveClient() {
 			t.Fatal("primaray servers should be active")
 		}
+		time.Sleep(time.Second / 10)
 		resetCounts()
 	})
 	//primaryActiveClient()
@@ -123,11 +117,8 @@ func TestFailoverClient(t *testing.T) {
 				t.Fatal(err)
 			}
 			go DoTransactions(clientB, id, reqs)
-			_, err = DoTransactions(clientA, id, reqs)
-			if err != nil {
-				t.Fatal(err)
-			}
-			time.Sleep(time.Second / 100)
+			DoTransactions(clientA, id, reqs)
+			time.Sleep(time.Second / 100 * time.Duration(ts.size))
 			if ts.fc.IsReadToServer() {
 				exCount.writes += int(ts.size)
 			} else {
