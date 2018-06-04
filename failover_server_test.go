@@ -22,8 +22,12 @@ func (w writer) Write(p []byte) (n int, err error) {
 
 type counter struct {
 	*Stats
-	reads  int
-	writes int
+	reads  int64
+	writes int64
+}
+
+func (c *counter) total() int64 {
+	return c.Stats.TotalDrops() + c.reads + c.writes
 }
 
 func (c *counter) reset() {

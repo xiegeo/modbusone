@@ -28,6 +28,7 @@ func (s *mockSerial) Write(data []byte) (int, error) {
 	n, err := s.Writer.Write(data)
 	if err == nil {
 		go s.Writer.Flush()
+		time.Sleep(time.Second / 1000)
 	}
 	return n, err
 }

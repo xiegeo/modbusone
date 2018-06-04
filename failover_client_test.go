@@ -112,18 +112,29 @@ func TestFailoverClient(t *testing.T) {
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {
+			if ts.fc.IsReadToServer() {
+				exCount.writes += int64(ts.size)
+			} else {
+				exCount.reads += int64(ts.size)
+			}
 			reqs, err := MakePDURequestHeadersSized(ts.fc, 0, ts.size, 1, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			go DoTransactions(clientB, id, reqs)
 			DoTransactions(clientA, id, reqs)
-			time.Sleep(time.Second / 100 * time.Duration(ts.size))
-			if ts.fc.IsReadToServer() {
-				exCount.writes += int(ts.size)
-			} else {
-				exCount.reads += int(ts.size)
+
+			for i := 0; i < ts.size; i++ {
+				time.Sleep(time.Second / 20)
+				if exCount.total() <= countA.total() ||
+					exCount.total() <= countB.total() ||
+					exCount.total() <= countC.total() {
+					break
+				}
 			}
+
+			time.Sleep(time.Second / 20)
+
 			if exCount.reads != countC.writes || exCount.writes != countC.reads {
 				t.Error("server counter     ", countC)
 				t.Error("expected (inverted)", exCount)
