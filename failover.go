@@ -3,6 +3,7 @@ package modbusone
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -153,6 +154,27 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 	}
 }
 
+func (s *FailoverSerialConn) describe() string {
+	b := strings.Builder{}
+	b.WriteString("FailoverSerialConn")
+	if s.isClient {
+		b.WriteString(" Client")
+	} else {
+		b.WriteString(" Server")
+	}
+	if s.isFailover {
+		b.WriteString(" Failover")
+	} else {
+		b.WriteString(" Primary")
+	}
+	if s.isActive {
+		b.WriteString(" Active")
+	} else {
+		b.WriteString(" Passive")
+	}
+	return b.String()
+}
+
 func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 	for {
 		n, err := s.PacketReader.Read(b)
@@ -172,27 +194,16 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 		isReply := now.Sub(s.requestTime) < s.MissDelay+s.BytesDelay(n) && IsRequestReply(s.reqPacket.Bytes(), pdu)
 
 		if !isReply {
+			debugf("got request from other client")
 			s.setLastReqTime(pdu, now)
-			return n, nil // give requests so caller can match with replies
-		}
-
-		if rtu[0] == 0 {
-			//zero slave id do not have a reply, so we won't expect one
-			s.resetRequestTime()
-			isReply = false
-		}
-
-		if s.isActive {
-			if s.isFailover {
+			if s.isFailover && s.isActive {
 				debugf("deactivates failover client")
 				s.isActive = false
 			}
+			return n, nil // give requests so caller can match with replies
 		}
-
-		if isReply {
-			s.resetRequestTime()
-			return n, nil
-		}
+		s.resetRequestTime()
+		return n, nil
 	}
 }
 
@@ -267,36 +278,39 @@ func (s *FailoverSerialConn) setLastReqTime(pdu PDU, now time.Time) {
 
 //IsRequestReply test if PDUs are a request reply pair, useful for lessening to transactions passively.
 func IsRequestReply(r, a PDU) bool {
-	debugf("IsRequestReply %x %x\n", r, a)
-	if r.GetFunctionCode() != a.GetFunctionCode() {
-		debugf("diff fc\n")
-		return false
-	}
-	if GetPDUSizeFromHeader(r, false) != len(r) {
-		debugf("r size not req %v, %x\n", GetPDUSizeFromHeader(r, true), r)
-		return false
-	}
-	if GetPDUSizeFromHeader(a, true) != len(a) {
-		debugf("a size not rep %v, %x\n", GetPDUSizeFromHeader(a, false), a)
-		return false
-	}
-	c, err := r.GetRequestCount()
-	if err != nil {
-		debugf("GetRequestCount error %v\n", err)
-		return false
-	}
-	eq := false
-	switch r.GetFunctionCode() {
-	case FcReadCoils, FcReadDiscreteInputs:
-		eq = uint8((c+7)/8) == a[1]
-	case FcReadHoldingRegisters, FcReadInputRegisters:
-		eq = uint8(c*2) == a[1]
-	case FcWriteSingleCoil, FcWriteSingleRegister,
-		FcWriteMultipleCoils, FcWriteMultipleRegisters:
-		eq = bytes.Equal(r[:5], a[:5])
-	}
-	if !eq {
-		debugf("header mismatch\n")
-	}
-	return eq
+	match := func() bool {
+		if r.GetFunctionCode() != a.GetFunctionCode() {
+			debugf("diff fc\n")
+			return false
+		}
+		if GetPDUSizeFromHeader(r, false) != len(r) {
+			debugf("r size not req %v, %x\n", GetPDUSizeFromHeader(r, true), r)
+			return false
+		}
+		if GetPDUSizeFromHeader(a, true) != len(a) {
+			debugf("a size not rep %v, %x\n", GetPDUSizeFromHeader(a, false), a)
+			return false
+		}
+		c, err := r.GetRequestCount()
+		if err != nil {
+			debugf("GetRequestCount error %v\n", err)
+			return false
+		}
+		eq := false
+		switch r.GetFunctionCode() {
+		case FcReadCoils, FcReadDiscreteInputs:
+			eq = uint8((c+7)/8) == a[1]
+		case FcReadHoldingRegisters, FcReadInputRegisters:
+			eq = uint8(c*2) == a[1]
+		case FcWriteSingleCoil, FcWriteSingleRegister,
+			FcWriteMultipleCoils, FcWriteMultipleRegisters:
+			eq = bytes.Equal(r[:5], a[:5])
+		}
+		if !eq {
+			debugf("header mismatch\n")
+		}
+		return eq
+	}()
+	debugf("IsRequestReply %x %x %v\n", r, a, match)
+	return match
 }

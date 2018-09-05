@@ -63,13 +63,14 @@ func (c *FailoverRTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Durat
 //is does not do the error checking that a normal client does, but insdead try to guess the best
 //interpretation.
 func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
-
+	debugf("serve routine for %v", c.com.describe())
 	go func() {
+		debugf("reader routine for %v", c.com.describe())
 		//Reader loop that always ready to received data. This make sure that read
 		//data is always new(ish), to dump data out that is received during an
 		//unexpected time.
-		rb := make([]byte, MaxRTUSize)
 		for {
+			rb := make([]byte, MaxRTUSize)
 			n, err := c.packetReader.Read(rb)
 			if err != nil {
 				debugf("RTUClient read err:%v\n", err)

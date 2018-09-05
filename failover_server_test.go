@@ -46,12 +46,12 @@ func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *count
 	shA := &SimpleHandler{
 		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
 			t.Logf("Read %s %v, quantity %v\n", name, address, quantity)
-			count.reads += int(quantity)
+			count.reads += int64(quantity)
 			return holdingRegisters[address : address+quantity], nil
 		},
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
 			t.Logf("Write %s %v, quantity %v\n", name, address, len(values))
-			count.writes += len(values)
+			count.writes += int64(len(values))
 			for i, v := range values {
 				holdingRegisters[address+uint16(i)] = v
 			}
@@ -62,8 +62,8 @@ func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *count
 }
 
 func setDelays(f *FailoverSerialConn) {
-	f.SecondaryDelay = time.Second / 100
-	f.MissDelay = time.Second / 50
+	f.SecondaryDelay = serverProcessingTime / 2
+	f.MissDelay = serverProcessingTime
 }
 
 func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *counter, *counter) {
@@ -78,16 +78,16 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial(ra, wfa), false, false) //server a connection
-	sb := NewFailoverConn(newMockSerial(rb, wfb), true, false)  //server b connection
-	cc := newMockSerial(rc, wfc)                                //client connection
+	sa := NewFailoverConn(newMockSerial("sa", ra, wfa), false, false) //server a connection
+	sb := NewFailoverConn(newMockSerial("sb", rb, wfb), true, false)  //server b connection
+	cc := newMockSerial("cc", rc, wfc)                                //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
 	client := NewRTUClient(cc, slaveID)
 
 	//faster timeouts during testing
-	client.SetServerProcessingTime(time.Second / 10)
+	client.SetServerProcessingTime(serverProcessingTime)
 	setDelays(sa)
 	setDelays(sb)
 
@@ -175,11 +175,11 @@ func TestFailoverServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			time.Sleep(time.Second / 100)
+			time.Sleep(serverProcessingTime)
 			if ts.fc.IsWriteToServer() {
-				exCount.writes += int(ts.size)
+				exCount.writes += int64(ts.size)
 			} else {
-				exCount.reads += int(ts.size)
+				exCount.reads += int64(ts.size)
 			}
 			if exCount.reads != countC.writes || exCount.writes != countC.reads {
 				t.Error("client counter     ", countC)

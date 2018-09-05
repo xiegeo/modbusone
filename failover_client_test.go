@@ -6,7 +6,11 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/xiegeo/coloredgoroutine"
 )
+
+var serverProcessingTime = time.Second / 5
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter) {
 
@@ -20,17 +24,17 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailoverConn(newMockSerial(ra, wfa), false, true) //client a connection
-	cb := NewFailoverConn(newMockSerial(rb, wfb), true, true)  //client b connection
-	sc := newMockSerial(rc, wfc)                               //server connection
+	ca := NewFailoverConn(newMockSerial("ca", ra, wfa), false, true) //client a connection
+	cb := NewFailoverConn(newMockSerial("cb", rb, wfb), true, true)  //client b connection
+	sc := newMockSerial("sc", rc, wfc)                               //server connection
 
 	clientA := NewFailoverRTUClient(ca, false, slaveID)
 	clientB := NewFailoverRTUClient(cb, true, slaveID)
 	server := NewRTUServer(sc, slaveID)
 
 	//faster timeouts during testing
-	clientA.SetServerProcessingTime(time.Second / 50)
-	clientB.SetServerProcessingTime(time.Second / 50)
+	clientA.SetServerProcessingTime(serverProcessingTime)
+	clientB.SetServerProcessingTime(serverProcessingTime)
 	setDelays(ca)
 	setDelays(cb)
 
@@ -83,13 +87,13 @@ func TestFailoverClient(t *testing.T) {
 		size uint16
 	}
 	testCases := []tc{
-		{FcWriteSingleRegister, 20},
-		{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 5},
+		//{FcWriteSingleRegister, 20},
+		//{FcWriteMultipleRegisters, 20},
+		{FcReadHoldingRegisters, 1},
 	}
 
 	_ = os.Stdout
-	//SetDebugOut(os.Stdout)
+	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
 	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
@@ -124,8 +128,8 @@ func TestFailoverClient(t *testing.T) {
 			go DoTransactions(clientB, id, reqs)
 			DoTransactions(clientA, id, reqs)
 
-			for i := 0; i < ts.size; i++ {
-				time.Sleep(time.Second / 20)
+			for i := uint16(0); i < ts.size; i++ {
+				time.Sleep(serverProcessingTime)
 				if exCount.total() <= countA.total() ||
 					exCount.total() <= countB.total() ||
 					exCount.total() <= countC.total() {
@@ -133,7 +137,7 @@ func TestFailoverClient(t *testing.T) {
 				}
 			}
 
-			time.Sleep(time.Second / 20)
+			time.Sleep(serverProcessingTime)
 
 			if exCount.reads != countC.writes || exCount.writes != countC.reads {
 				t.Error("server counter     ", countC)

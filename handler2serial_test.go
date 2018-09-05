@@ -15,21 +15,24 @@ var _ = os.Stdin
 type mockSerial struct {
 	io.Reader
 	*bufio.Writer
+	name        string
 	LastWritten []byte
 	s           Stats
 }
 
-func newMockSerial(r io.Reader, w io.Writer) *mockSerial {
+func newMockSerial(name string, r io.Reader, w io.Writer) *mockSerial {
 	bw := bufio.NewWriterSize(w, MaxRTUSize)
-	return &mockSerial{Reader: r, Writer: bw}
+	return &mockSerial{Reader: r, Writer: bw, name: name}
 }
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
+	debugf("%v write %x", s.name, data)
 	n, err := s.Writer.Write(data)
-	if err == nil {
+	s.Writer.Flush()
+	/*if err == nil {
 		go s.Writer.Flush()
 		time.Sleep(time.Second / 1000)
-	}
+	}*/
 	return n, err
 }
 func (s *mockSerial) Close() error                   { return nil }
@@ -45,8 +48,8 @@ func TestHandler(t *testing.T) {
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 
-	cc := newMockSerial(r2, w1) //client connection
-	sc := newMockSerial(r1, w2) //server connection
+	cc := newMockSerial("c", r2, w1) //client connection
+	sc := newMockSerial("s", r1, w2) //server connection
 
 	client := NewRTUClient(cc, slaveID)
 	server := NewRTUServer(sc, slaveID)

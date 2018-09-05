@@ -137,6 +137,7 @@ var DebugOut io.Writer
 var debugLock sync.Mutex
 
 //SetDebugOut to print debug messages, set to nil to turn off debug output.
+//TODO refactor to use pkg/sync/atomic/#Value once DebugOut is removed
 func SetDebugOut(w io.Writer) {
 	debugLock.Lock()
 	defer debugLock.Unlock()
@@ -144,9 +145,6 @@ func SetDebugOut(w io.Writer) {
 }
 
 func debugf(format string, a ...interface{}) {
-	if DebugOut == nil {
-		return
-	}
 	debugLock.Lock()
 	defer debugLock.Unlock()
 	if DebugOut == nil {

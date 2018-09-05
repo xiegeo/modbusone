@@ -15,8 +15,8 @@ func connectToMockServer(slaveID byte) io.ReadWriter {
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 
-	cc := newMockSerial(r2, w1) //client connection
-	sc := newMockSerial(r1, w2) //server connection
+	cc := newMockSerial("c", r2, w1) //client connection
+	sc := newMockSerial("s", r1, w2) //server connection
 
 	server := NewRTUServer(sc, slaveID)
 
