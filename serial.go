@@ -2,6 +2,7 @@ package modbusone
 
 import (
 	"io"
+	"sync/atomic"
 	"time"
 )
 
@@ -35,14 +36,21 @@ type Stats struct {
 
 //Reset the stats to zero
 func (s *Stats) Reset() {
-	*s = Stats{}
+	atomic.StoreInt64(&s.ReadPackets, 0)
+	atomic.StoreInt64(&s.CrcErrors, 0)
+	atomic.StoreInt64(&s.RemoteErrors, 0)
+	atomic.StoreInt64(&s.OtherErrors, 0)
+	atomic.StoreInt64(&s.LongReadWarnings, 0)
+	atomic.StoreInt64(&s.FormateWarnings, 0)
+	atomic.StoreInt64(&s.IDDrops, 0)
+	atomic.StoreInt64(&s.OtherDrops, 0)
 }
 
 //TotalDrops adds up all the errors for the total number of read packets dropped
 func (s *Stats) TotalDrops() int64 {
-	return s.CrcErrors + s.RemoteErrors + s.OtherErrors +
-		s.LongReadWarnings + s.FormateWarnings +
-		s.IDDrops + s.OtherDrops
+	return atomic.LoadInt64(&s.CrcErrors) + atomic.LoadInt64(&s.RemoteErrors) + atomic.LoadInt64(&s.OtherErrors) +
+		atomic.LoadInt64(&s.LongReadWarnings) + atomic.LoadInt64(&s.FormateWarnings) +
+		atomic.LoadInt64(&s.IDDrops) + atomic.LoadInt64(&s.OtherDrops)
 }
 
 //NewSerialContext creates a SerialContext from any io.ReadWriteCloser

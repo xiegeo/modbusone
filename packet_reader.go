@@ -3,6 +3,7 @@ package modbusone
 import (
 	"io"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"github.com/xiegeo/modbusone/crc"
@@ -37,7 +38,7 @@ func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
 func (s *rtuPacketReader) PacketReaderFace() {}
 
 func (s *rtuPacketReader) Read(p []byte) (int, error) {
-	s.r.Stats().ReadPackets++
+	atomic.AddInt64(&s.r.Stats().ReadPackets, 1)
 	expected := smallestRTUSize
 	read := 0
 	for read < expected {
@@ -71,13 +72,13 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 	}
 	if read > expected {
 		if crc.Validate(p[:expected]) {
-			s.r.Stats().LongReadWarnings++
+			atomic.AddInt64(&s.r.Stats().LongReadWarnings, 1)
 			s.last = append(s.last[:0], p[expected:read]...)
 			debugf("long read warning %v / %v", expected, read)
 			return expected, nil
 		}
 		if crc.Validate(p[:read]) {
-			s.r.Stats().FormateWarnings++
+			atomic.AddInt64(&s.r.Stats().FormateWarnings, 1)
 		}
 	}
 	return read, nil

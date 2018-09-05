@@ -139,17 +139,17 @@ func TestFailoverClient(t *testing.T) {
 
 			time.Sleep(serverProcessingTime)
 
-			if exCount.reads != countC.writes || exCount.writes != countC.reads {
+			if !exCount.sameInverted(countC) {
 				t.Error("server counter     ", countC)
 				t.Error("expected (inverted)", exCount)
 				t.Error(countC.Stats)
 			}
-			if exCount.reads != countA.reads || exCount.writes != countA.writes {
+			if !exCount.same(countA) {
 				t.Error("client a counter", countA)
 				t.Error("expected        ", exCount)
 				t.Error(countA.Stats)
 			}
-			if exCount.reads != countB.reads || exCount.writes != countB.writes {
+			if !exCount.same(countB) {
 				t.Error("client b counter", countB)
 				t.Error("expected        ", exCount)
 				t.Error(countB.Stats)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -27,17 +28,26 @@ type counter struct {
 }
 
 func (c *counter) total() int64 {
-	return c.Stats.TotalDrops() + c.reads + c.writes
+	return c.Stats.TotalDrops() + atomic.LoadInt64(&c.reads) + atomic.LoadInt64(&c.writes)
 }
 
 func (c *counter) reset() {
 	c.Stats.Reset()
-	c.reads = 0
-	c.writes = 0
+	atomic.StoreInt64(&c.reads, 0)
+	atomic.StoreInt64(&c.writes, 0)
+}
+
+func (c *counter) same(to *counter) bool {
+	return atomic.LoadInt64(&c.reads) == atomic.LoadInt64(&to.reads) &&
+		atomic.LoadInt64(&c.writes) == atomic.LoadInt64(&to.writes)
+}
+func (c *counter) sameInverted(to *counter) bool {
+	return atomic.LoadInt64(&c.reads) == atomic.LoadInt64(&to.writes) &&
+		atomic.LoadInt64(&c.writes) == atomic.LoadInt64(&to.reads)
 }
 
 func (c counter) String() string {
-	return fmt.Sprintf("reads:%v writes:%v drops:%v", c.reads, c.writes, c.TotalDrops())
+	return fmt.Sprintf("reads:%v writes:%v drops:%v", atomic.LoadInt64(&c.reads), atomic.LoadInt64(&c.writes), c.TotalDrops())
 }
 
 func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *counter) {
@@ -46,12 +56,12 @@ func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *count
 	shA := &SimpleHandler{
 		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
 			t.Logf("Read %s %v, quantity %v\n", name, address, quantity)
-			count.reads += int64(quantity)
+			atomic.AddInt64(&count.reads, int64(quantity))
 			return holdingRegisters[address : address+quantity], nil
 		},
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
 			t.Logf("Write %s %v, quantity %v\n", name, address, len(values))
-			count.writes += int64(len(values))
+			atomic.AddInt64(&count.writes, int64(len(values)))
 			for i, v := range values {
 				holdingRegisters[address+uint16(i)] = v
 			}

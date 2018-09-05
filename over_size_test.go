@@ -35,17 +35,17 @@ func connectToMockServer(slaveID byte) io.ReadWriter {
 func TestOverSize(t *testing.T) {
 	//DebugOut = os.Stdout
 	slaveID := byte(0x11)
-	cc := connectToMockServer(slaveID)
+	cct := connectToMockServer(slaveID)
 	pdu := PDU(
 		append([]byte{byte(FcWriteMultipleRegisters),
 			0, 0, 0, 200, 0}, make([]byte, 400)...))
 	rtu := MakeRTU(slaveID, pdu)
-	cc.Write([]byte(rtu))
+	cct.Write([]byte(rtu))
 
 	rep := make([]byte, 1000)
 	nchan := make(chan int)
 	go func() {
-		n, _ := cc.Read(rep)
+		n, _ := cct.Read(rep)
 		nchan <- n
 	}()
 	timeout := time.NewTimer(time.Second / 20)
@@ -63,7 +63,7 @@ func TestOverSize(t *testing.T) {
 	}()
 
 	//New server with OverSizeSupport
-	cc = connectToMockServer(slaveID)
+	cc := connectToMockServer(slaveID)
 	cc.Write([]byte(rtu))
 	go func() {
 		for {
