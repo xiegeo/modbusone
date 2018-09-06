@@ -96,8 +96,8 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 		//Reader loop that always ready to received data. This make sure that read
 		//data is always new(ish), to dump data out that is received during an
 		//unexpected time.
-		rb := make([]byte, MaxRTUSize)
 		for {
+			rb := make([]byte, MaxRTUSize)
 			n, err := c.packetReader.Read(rb)
 			if err != nil {
 				debugf("RTUClient read err:%v\n", err)
