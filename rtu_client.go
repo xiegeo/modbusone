@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -114,7 +115,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 		act := <-c.actions
 		switch act.t {
 		default:
-			c.com.Stats().OtherDrops++
+			atomic.AddInt64(&c.com.Stats().OtherDrops, 1)
 			debugf("RTUClient drop unexpected: %v", act)
 			continue
 		case clientError:
@@ -168,29 +169,29 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 					}
 				}
 				if react.data[0] != act.data[0] {
-					c.com.Stats().IDDrops++
+					atomic.AddInt64(&c.com.Stats().IDDrops, 1)
 					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
 					break SELECT
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
 					if err == ErrorCrc {
-						c.com.Stats().CrcErrors++
+						atomic.AddInt64(&c.com.Stats().CrcErrors, 1)
 					} else {
-						c.com.Stats().OtherErrors++
+						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					}
 					act.errChan <- err
 					break READ_LOOP
 				}
 				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
-					c.com.Stats().RemoteErrors++
+					atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					handler.OnError(ap, rp)
 					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
 				if !IsRequestReply(act.data.fastGetPDU(), rp) {
-					c.com.Stats().OtherErrors++
+					atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					act.errChan <- fmt.Errorf("unexpected reply:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
@@ -198,13 +199,13 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 					//read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {
-						c.com.Stats().OtherErrors++
+						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 						act.errChan <- err
 						break READ_LOOP
 					}
 					err = handler.OnWrite(ap, bs)
 					if err != nil {
-						c.com.Stats().OtherErrors++
+						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					}
 					act.errChan <- err //success if nil
 					break READ_LOOP
