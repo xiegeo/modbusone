@@ -1,6 +1,7 @@
 package modbusone
 
 import (
+	"fmt"
 	"io"
 	"sync/atomic"
 	"time"
@@ -51,6 +52,12 @@ func (s *Stats) TotalDrops() int64 {
 	return atomic.LoadInt64(&s.CrcErrors) + atomic.LoadInt64(&s.RemoteErrors) + atomic.LoadInt64(&s.OtherErrors) +
 		atomic.LoadInt64(&s.LongReadWarnings) + atomic.LoadInt64(&s.FormateWarnings) +
 		atomic.LoadInt64(&s.IDDrops) + atomic.LoadInt64(&s.OtherDrops)
+}
+
+func (s *Stats) String() string {
+	return fmt.Sprint(atomic.LoadInt64(&s.CrcErrors), atomic.LoadInt64(&s.RemoteErrors), atomic.LoadInt64(&s.OtherErrors),
+		atomic.LoadInt64(&s.LongReadWarnings), atomic.LoadInt64(&s.FormateWarnings),
+		atomic.LoadInt64(&s.IDDrops), atomic.LoadInt64(&s.OtherDrops))
 }
 
 //NewSerialContext creates a SerialContext from any io.ReadWriteCloser

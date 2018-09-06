@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -43,8 +44,8 @@ type FailoverSerialConn struct {
 
 	//how many misses is the primary detected as down
 	//default 5
-	MissesMax int
-	misses    int
+	MissesMax int32
+	misses    int32 //use atomic
 }
 
 //NewFailoverConn adds failover function to a SerialContext
@@ -118,7 +119,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			}
 			//yes
 			s.isActive = false
-			s.misses = 0
+			atomic.StoreInt32(&s.misses, 0)
 			s.resetRequestTime()
 			debugf("primary found, going from active to passive")
 			continue //throw away and read again
@@ -131,8 +132,8 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
-				s.misses++
-				if s.misses > s.MissesMax {
+				misses := atomic.AddInt32(&s.misses, 1)
+				if misses > s.MissesMax {
 					s.isActive = true
 				} else {
 					s.setLastReqTime(pdu, now)
@@ -140,7 +141,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 
-			s.misses = 0
+			atomic.StoreInt32(&s.misses, 0)
 			if IsRequestReply(s.reqPacket.Bytes(), pdu) {
 				s.resetRequestTime()
 				debugf("ignore read of reply from the other server")
@@ -181,7 +182,7 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 		if err != nil {
 			return n, err
 		}
-		s.misses = 0
+		atomic.StoreInt32(&s.misses, 0)
 		now := time.Now()
 
 		rtu := RTU(b[:n])
@@ -237,12 +238,13 @@ func (s *FailoverSerialConn) Write(b []byte) (int, error) {
 		}
 
 		if !s.isActive {
-			if s.misses >= s.MissesMax {
-				debugf("activities client with %v misses\n", s.misses)
+			misses := atomic.LoadInt32(&s.misses)
+			if misses >= s.MissesMax {
+				debugf("activities client with %v misses\n", misses)
 				s.isActive = true
 			} else {
-				s.misses++
-				debugf("%v misses\n", s.misses)
+				misses = atomic.AddInt32(&s.misses, 1)
+				debugf("%v misses\n", misses)
 			}
 		}
 

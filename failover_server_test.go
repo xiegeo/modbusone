@@ -46,7 +46,7 @@ func (c *counter) sameInverted(to *counter) bool {
 		atomic.LoadInt64(&c.writes) == atomic.LoadInt64(&to.reads)
 }
 
-func (c counter) String() string {
+func (c *counter) String() string {
 	return fmt.Sprintf("reads:%v writes:%v drops:%v", atomic.LoadInt64(&c.reads), atomic.LoadInt64(&c.writes), c.TotalDrops())
 }
 
@@ -120,7 +120,7 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 			return true
 		}
 		sa.isActive = true
-		sa.misses = sa.MissesMax
+		atomic.StoreInt32(&sa.misses, sa.MissesMax)
 		return false
 	}
 
@@ -191,15 +191,15 @@ func TestFailoverServer(t *testing.T) {
 			} else {
 				exCount.reads += int64(ts.size)
 			}
-			if exCount.reads != countC.writes || exCount.writes != countC.reads {
+			if !exCount.sameInverted(countC) {
 				t.Error("client counter     ", countC)
 				t.Error("expected (inverted)", exCount)
 			}
-			if exCount.reads != countA.reads || exCount.writes != countA.writes {
+			if !exCount.same(countA) {
 				t.Error("server a counter", countA)
 				t.Error("expected        ", exCount)
 			}
-			if exCount.reads != countB.reads || exCount.writes != countB.writes {
+			if !exCount.same(countB) {
 				t.Error("server b counter", countB)
 				t.Error("expected        ", exCount)
 			}

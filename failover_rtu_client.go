@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -99,7 +100,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		}
 		if !IsRequestReply(last.Bytes(), pdu) {
 			if last.Len() != 0 {
-				c.com.Stats().OtherDrops++
+				atomic.AddInt64(&c.com.Stats().OtherDrops, 1)
 			}
 			last.Reset()
 			last.Write(pdu)

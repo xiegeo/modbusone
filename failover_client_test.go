@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -57,7 +58,7 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 			return true
 		}
 		ca.isActive = true
-		ca.misses = ca.MissesMax
+		atomic.StoreInt32(&ca.misses, ca.MissesMax)
 		return false
 	}
 
@@ -67,6 +68,8 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 //return if primary is active, or set it to active is not already
 var primaryActiveClient func() bool
 
+var testFailoverClientCount = 0
+
 func TestFailoverClient(t *testing.T) {
 	//t.Skip()
 	//errorRate := 3  //number of failures allowed for fuzzyness of each test
@@ -74,7 +77,7 @@ func TestFailoverClient(t *testing.T) {
 
 	id := byte(0x77)
 	clientA, clientB, countA, countB, countC := connectMockClients(t, id)
-	exCount := counter{Stats: &Stats{}}
+	exCount := &counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()
 		countA.reset()
@@ -89,12 +92,16 @@ func TestFailoverClient(t *testing.T) {
 	testCases := []tc{
 		//{FcWriteSingleRegister, 20},
 		//{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 1},
+		{FcReadHoldingRegisters, 5},
 	}
 
 	_ = os.Stdout
 	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	defer func() { SetDebugOut(nil) }()
+	testFailoverClientCount++
+	fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started ===\n", testFailoverClientCount)
+	defer func() {
+		SetDebugOut(nil)
+	}()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)
