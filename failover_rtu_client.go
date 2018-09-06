@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-//RTUClient implements Client/Master side logic for RTU over a SerialContext to
-//be used by a ProtocolHandler
+//FailoverRTUClient implements Client/Master side logic for RTU over a SerialContext to
+//be used by a ProtocolHandler with failover function.
 type FailoverRTUClient struct {
 	com                  *FailoverSerialConn
 	packetReader         PacketReader

@@ -24,6 +24,7 @@ type serial struct {
 	s        Stats
 }
 
+//Stats records statics on a SerialContext
 type Stats struct {
 	ReadPackets      int64
 	CrcErrors        int64
