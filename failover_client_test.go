@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -96,16 +95,16 @@ func TestFailoverClient(t *testing.T) {
 		size uint16
 	}
 	testCases := []tc{
-		//{FcWriteSingleRegister, 20},
-		//{FcWriteMultipleRegisters, 20},
+		{FcWriteSingleRegister, 20},
+		{FcWriteMultipleRegisters, 20},
 		{FcReadHoldingRegisters, 20},
 	}
 
 	_ = os.Stdout
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	SetDebugOut(nil)
+	_ = coloredgoroutine.Colors
+	//SetDebugOut(coloredgoroutine.Colors(os.Stdout))
 	testFailoverClientCount++
-	fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
+	//fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
 	defer func() {
 		SetDebugOut(nil)
 	}()
