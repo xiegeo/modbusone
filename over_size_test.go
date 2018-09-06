@@ -10,13 +10,13 @@ import (
 
 var _ = os.Stdout
 
-func connectToMockServer(slaveID byte) io.ReadWriter {
+func connectToMockServer(slaveID byte) io.ReadWriteCloser {
 
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 
-	cc := newMockSerial("c", r2, w1) //client connection
-	sc := newMockSerial("s", r1, w2) //server connection
+	cc := newMockSerial("c", r2, w1, w1, w2) //client connection
+	sc := newMockSerial("s", r1, w2, w2)     //server connection
 
 	server := NewRTUServer(sc, slaveID)
 
@@ -36,6 +36,7 @@ func TestOverSize(t *testing.T) {
 	//DebugOut = os.Stdout
 	slaveID := byte(0x11)
 	cct := connectToMockServer(slaveID)
+	defer cct.Close()
 	pdu := PDU(
 		append([]byte{byte(FcWriteMultipleRegisters),
 			0, 0, 0, 200, 0}, make([]byte, 400)...))

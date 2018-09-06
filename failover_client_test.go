@@ -14,7 +14,7 @@ import (
 
 var serverProcessingTime = time.Second / 20
 
-func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter) {
+func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter, func()) {
 
 	//pipes
 	ra, wa := io.Pipe() //client a
@@ -26,9 +26,9 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailoverConn(newMockSerial("ca", ra, wfa), false, true) //client a connection
-	cb := NewFailoverConn(newMockSerial("cb", rb, wfb), true, true)  //client b connection
-	sc := newMockSerial("sc", rc, wfc)                               //server connection
+	ca := NewFailoverConn(newMockSerial("ca", ra, wfa, ra), false, true) //client a connection
+	cb := NewFailoverConn(newMockSerial("cb", rb, wfb, rb), true, true)  //client b connection
+	sc := newMockSerial("sc", rc, wfc, rc)                               //server connection
 
 	clientA := NewFailoverRTUClient(ca, false, slaveID)
 	clientB := NewFailoverRTUClient(cb, true, slaveID)
@@ -63,7 +63,11 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 		return false
 	}
 
-	return clientA, clientB, countA, countB, countC
+	return clientA, clientB, countA, countB, countC, func() {
+		clientA.Close()
+		clientB.Close()
+		server.Close()
+	}
 }
 
 //return if primary is active, or set it to active is not already
@@ -77,7 +81,8 @@ func TestFailoverClient(t *testing.T) {
 	//testCount := 20 //number of repeats of each test
 
 	id := byte(0x77)
-	clientA, clientB, countA, countB, countC := connectMockClients(t, id)
+	clientA, clientB, countA, countB, countC, close := connectMockClients(t, id)
+	defer close()
 	exCount := &counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()

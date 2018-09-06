@@ -240,6 +240,11 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 	}
 }
 
+//Close closes the client and closes the connect
+func (c *FailoverRTUClient) Close() error {
+	return c.com.Close()
+}
+
 //DoTransaction starts a transaction, and returns a channel that returns an error
 //or nil, with the default slaveID.
 //

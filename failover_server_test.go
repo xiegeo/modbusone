@@ -76,7 +76,7 @@ func setDelays(f *FailoverSerialConn) {
 	f.MissDelay = serverProcessingTime
 }
 
-func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *counter, *counter) {
+func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *counter, *counter, func()) {
 
 	//pipes
 	ra, wa := io.Pipe() //server a
@@ -88,9 +88,9 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial("sa", ra, wfa), false, false) //server a connection
-	sb := NewFailoverConn(newMockSerial("sb", rb, wfb), true, false)  //server b connection
-	cc := newMockSerial("cc", rc, wfc)                                //client connection
+	sa := NewFailoverConn(newMockSerial("sa", ra, wfa,ra), false, false) //server a connection
+	sb := NewFailoverConn(newMockSerial("sb", rb, wfb,rb), true, false)  //server b connection
+	cc := newMockSerial("cc", rc, wfc,rc)                                //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
@@ -124,7 +124,11 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 		return false
 	}
 
-	return client, countA, countB, countC
+	return client, countA, countB, countC, func() {
+		serverA.Close()
+		serverB.Close()
+		client.Close()
+	}
 }
 
 //return if primary is active, or set it to active is not already
@@ -132,7 +136,8 @@ var primaryActiveServer func() bool
 
 func TestFailoverServer(t *testing.T) {
 	id := byte(0x77)
-	client, countA, countB, countC := connectToMockServers(t, id)
+	client, countA, countB, countC, close := connectToMockServers(t, id)
+	defer close()
 	exCount := counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()

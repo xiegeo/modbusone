@@ -14,13 +14,14 @@ var _ = os.Stdin
 type mockSerial struct {
 	io.Reader
 	io.Writer
+	closers     []io.Closer
 	name        string
 	LastWritten []byte
 	s           Stats
 }
 
-func newMockSerial(name string, r io.Reader, w io.Writer) *mockSerial {
-	return &mockSerial{Reader: r, Writer: w, name: name}
+func newMockSerial(name string, r io.Reader, w io.Writer, c ...io.Closer) *mockSerial {
+	return &mockSerial{Reader: r, Writer: w, closers: c, name: name}
 }
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
@@ -28,7 +29,12 @@ func (s *mockSerial) Write(data []byte) (int, error) {
 	n, err := s.Writer.Write(data)
 	return n, err
 }
-func (s *mockSerial) Close() error { return nil }
+func (s *mockSerial) Close() error {
+	for _, c := range s.closers {
+		c.Close()
+	}
+	return nil
+}
 func (s *mockSerial) MinDelay() time.Duration {
 	return time.Second / 1000000 //this is needed for multi-client test
 }
@@ -43,11 +49,13 @@ func TestHandler(t *testing.T) {
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 
-	cc := newMockSerial("c", r2, w1) //client connection
-	sc := newMockSerial("s", r1, w2) //server connection
+	cc := newMockSerial("c", r2, w1, w1) //client connection
+	sc := newMockSerial("s", r1, w2, w2) //server connection
 
 	client := NewRTUClient(cc, slaveID)
+	defer client.Close()
 	server := NewRTUServer(sc, slaveID)
+	defer server.Close()
 
 	subtest := t
 

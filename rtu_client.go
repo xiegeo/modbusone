@@ -217,6 +217,11 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 	}
 }
 
+//Close closes the client and closes the connect
+func (c *RTUClient) Close() error {
+	return c.com.Close()
+}
+
 //DoTransaction starts a transaction, and returns a channel that returns an error
 //or nil, with the default slaveID.
 //

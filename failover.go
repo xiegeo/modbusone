@@ -79,6 +79,7 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 	return c
 }
 
+//BytesDelay implements BytesDelay for SerialContext
 func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
 	return s.SerialContext.BytesDelay(n)
 }
@@ -175,7 +176,6 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			s.setLastReqTime(pdu, now)
 			return n, nil
 		}
-		//return n, errors.New("assert deadcode at end of read")
 	}
 }
 

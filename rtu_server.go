@@ -122,6 +122,11 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	return ioErr
 }
 
+//Close closes the server and closes the connect
+func (s *RTUServer) Close() error {
+	return s.com.Close()
+}
+
 //Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
 //See also flag.Uint64 and strconv.ParseUint
 func Uint64ToSlaveID(n uint64) (byte, error) {
