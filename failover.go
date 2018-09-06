@@ -3,10 +3,20 @@ package modbusone
 import (
 	"bytes"
 	"errors"
+	"log"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
+
+	"net/http"
+	_ "net/http/pprof"
 )
+
+func init() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+}
 
 //FailoverSerialConn manages a failover connection, which does failover using
 //shared serial bus and shared slaveId. Slaves using other ids on the same
@@ -17,7 +27,8 @@ type FailoverSerialConn struct {
 	PacketReader
 	isClient   bool //client or server
 	isFailover bool //primary or failover
-	isActive   bool //active or passive
+	isActive   bool //use atomic, active or passive
+	lock       sync.Mutex
 
 	requestTime time.Time //time of the last packet observed passively
 	reqPacket   bytes.Buffer
@@ -45,7 +56,7 @@ type FailoverSerialConn struct {
 	//how many misses is the primary detected as down
 	//default 5
 	MissesMax int32
-	misses    int32 //use atomic
+	misses    int32
 }
 
 //NewFailoverConn adds failover function to a SerialContext
@@ -73,11 +84,24 @@ func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
 }
 
 func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
+	locked := false
+	defer func() {
+		if locked {
+			s.lock.Unlock()
+		}
+	}()
 	for {
+		if locked {
+			s.lock.Unlock()
+			locked = false
+		}
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
 			return n, err
 		}
+		s.lock.Lock()
+		locked = true
+
 		if !s.isFailover {
 			if !s.isActive {
 				if s.startTime.Add(s.PrimaryForceBackDelay).Before(time.Now()) {
@@ -119,7 +143,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			}
 			//yes
 			s.isActive = false
-			atomic.StoreInt32(&s.misses, 0)
+			s.misses = 0
 			s.resetRequestTime()
 			debugf("primary found, going from active to passive")
 			continue //throw away and read again
@@ -132,8 +156,8 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
-				misses := atomic.AddInt32(&s.misses, 1)
-				if misses > s.MissesMax {
+				s.misses++
+				if s.misses > s.MissesMax {
 					s.isActive = true
 				} else {
 					s.setLastReqTime(pdu, now)
@@ -141,7 +165,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 
-			atomic.StoreInt32(&s.misses, 0)
+			s.misses = 0
 			if IsRequestReply(s.reqPacket.Bytes(), pdu) {
 				s.resetRequestTime()
 				debugf("ignore read of reply from the other server")
@@ -177,12 +201,24 @@ func (s *FailoverSerialConn) describe() string {
 }
 
 func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
+	locked := false
+	defer func() {
+		if locked {
+			s.lock.Unlock()
+		}
+	}()
 	for {
+		if locked {
+			s.lock.Unlock()
+			locked = false
+		}
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
 			return n, err
 		}
-		atomic.StoreInt32(&s.misses, 0)
+		s.lock.Lock()
+		locked = true
+		s.misses = 0
 		now := time.Now()
 
 		rtu := RTU(b[:n])
@@ -211,7 +247,9 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 //Read reads the serial port
 func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 	defer func() {
+		s.lock.Lock()
 		s.lastRead = time.Now()
+		s.lock.Unlock()
 	}()
 	if s.isClient {
 		return s.clientRead(b)
@@ -220,7 +258,14 @@ func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 }
 
 func (s *FailoverSerialConn) Write(b []byte) (int, error) {
+	s.lock.Lock()
+	locked := true
 	debugf("start write c %v, a %v, f %v\n", s.isClient, s.isActive, s.isFailover)
+	defer func() {
+		if locked {
+			s.lock.Unlock()
+		}
+	}()
 	if s.isClient {
 		now := time.Now()
 		if !s.isFailover {
@@ -238,28 +283,36 @@ func (s *FailoverSerialConn) Write(b []byte) (int, error) {
 		}
 
 		if !s.isActive {
-			misses := atomic.LoadInt32(&s.misses)
-			if misses >= s.MissesMax {
-				debugf("activities client with %v misses\n", misses)
+			if s.misses >= s.MissesMax {
+				debugf("activities client with %v misses\n", s.misses)
 				s.isActive = true
 			} else {
-				misses = atomic.AddInt32(&s.misses, 1)
-				debugf("%v misses\n", misses)
+				s.misses++
+				debugf("%v misses\n", s.misses)
 			}
 		}
 
 		if s.isActive {
 			s.setLastReqTime(RTU(b).fastGetPDU(), now)
+			s.lock.Unlock()
+			locked = false
 			return s.SerialContext.Write(b)
 		}
 	} else if s.isActive {
 		if s.isFailover {
+			s.lock.Unlock()
+			locked = false
+			//give primary time to react first
 			time.Sleep(s.SecondaryDelay + s.BytesDelay(len(b)))
+			s.lock.Lock()
+			locked = true
 			if !s.isActive {
 				goto endActive
 			}
 		}
 		s.resetRequestTime()
+		s.lock.Unlock()
+		locked = false
 		return s.SerialContext.Write(b)
 	}
 endActive:

@@ -1,7 +1,6 @@
 package modbusone
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -14,29 +13,26 @@ var _ = os.Stdin
 
 type mockSerial struct {
 	io.Reader
-	*bufio.Writer
+	io.Writer
 	name        string
 	LastWritten []byte
 	s           Stats
 }
 
 func newMockSerial(name string, r io.Reader, w io.Writer) *mockSerial {
-	bw := bufio.NewWriterSize(w, MaxRTUSize)
-	return &mockSerial{Reader: r, Writer: bw, name: name}
+	return &mockSerial{Reader: r, Writer: w, name: name}
 }
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
 	debugf("%v write %x", s.name, data)
+	//runtime.GC() //debuging: make a certain ordering of events more likely
 	n, err := s.Writer.Write(data)
-	s.Writer.Flush()
-	/*if err == nil {
-		go s.Writer.Flush()
-		time.Sleep(time.Second / 1000)
-	}*/
 	return n, err
 }
-func (s *mockSerial) Close() error                   { return nil }
-func (s *mockSerial) MinDelay() time.Duration        { return 0 }
+func (s *mockSerial) Close() error { return nil }
+func (s *mockSerial) MinDelay() time.Duration {
+	return time.Second / 1000000 //this is needed for multi-client test
+}
 func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 func (s *mockSerial) Stats() *Stats                  { return &s.s }
 

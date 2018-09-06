@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/xiegeo/coloredgoroutine"
 )
 
-var serverProcessingTime = time.Second / 5
+var serverProcessingTime = time.Second / 2
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter) {
 
@@ -92,13 +93,14 @@ func TestFailoverClient(t *testing.T) {
 	testCases := []tc{
 		//{FcWriteSingleRegister, 20},
 		//{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 5},
+		{FcReadHoldingRegisters, 20},
 	}
 
 	_ = os.Stdout
 	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	SetDebugOut(nil)
 	testFailoverClientCount++
-	fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started ===\n", testFailoverClientCount)
+	fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
 	defer func() {
 		SetDebugOut(nil)
 	}()
