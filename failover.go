@@ -191,47 +191,39 @@ func (s *FailoverSerialConn) describe() string {
 }
 
 func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
-	locked := false
-	defer func() {
-		if locked {
-			s.lock.Unlock()
-		}
-	}()
-	for {
-		if locked {
-			s.lock.Unlock()
-			locked = false
-		}
-		n, err := s.PacketReader.Read(b)
-		if err != nil {
-			return n, err
-		}
-		s.lock.Lock()
-		locked = true
-		s.misses = 0
-		now := time.Now()
-
-		rtu := RTU(b[:n])
-		pdu, err := rtu.GetPDU()
-		if err != nil {
-			debugf("failover clientRead internal GetPDU error : %v", err)
-			return n, err //bubbles formate up errors
-		}
-
-		isReply := now.Sub(s.requestTime) < s.MissDelay+s.BytesDelay(n) && IsRequestReply(s.reqPacket.Bytes(), pdu)
-
-		if !isReply {
-			debugf("got request from other client")
-			s.setLastReqTime(pdu, now)
-			if s.isFailover && s.isActive {
-				debugf("deactivates failover client")
-				s.isActive = false
-			}
-			return n, nil // give requests so caller can match with replies
-		}
-		s.resetRequestTime()
-		return n, nil
+	n, err := s.PacketReader.Read(b)
+	if err != nil {
+		return n, err
 	}
+	now := time.Now()
+
+	rtu := RTU(b[:n])
+	pdu, err := rtu.GetPDU()
+
+	s.lock.Lock()
+	defer func() {
+		s.misses = 0
+		s.lock.Unlock()
+	}()
+
+	if err != nil {
+		debugf("failover clientRead internal GetPDU error : %v", err)
+		return n, err //bubbles formate up errors
+	}
+
+	isReply := now.Sub(s.requestTime) < s.MissDelay+s.BytesDelay(n) && IsRequestReply(s.reqPacket.Bytes(), pdu)
+
+	if !isReply {
+		debugf("got request from other client")
+		s.setLastReqTime(pdu, now)
+		if s.isFailover && s.isActive {
+			debugf("deactivates failover client")
+			s.isActive = false
+		}
+		return n, nil // give requests so caller can match with replies
+	}
+	s.resetRequestTime()
+	return n, nil
 }
 
 //Read reads the serial port
