@@ -46,7 +46,10 @@ func TestOverSize(t *testing.T) {
 	rep := make([]byte, 1000)
 	nchan := make(chan int)
 	go func() {
-		n, _ := cct.Read(rep)
+		n, err := cct.Read(rep)
+		if n == 0 && err != nil {
+			return
+		}
 		nchan <- n
 	}()
 	timeout := time.NewTimer(time.Second / 20)
@@ -65,10 +68,14 @@ func TestOverSize(t *testing.T) {
 
 	//New server with OverSizeSupport
 	cc := connectToMockServer(slaveID)
+	defer cc.Close()
 	cc.Write([]byte(rtu))
 	go func() {
 		for {
-			n, _ := cc.Read(rep)
+			n, err := cc.Read(rep)
+			if n == 0 && err != nil {
+				return
+			}
 			nchan <- n
 		}
 	}()

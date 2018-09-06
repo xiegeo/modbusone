@@ -75,7 +75,8 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 			n, err := c.packetReader.Read(rb)
 			if err != nil {
 				debugf("RTUClient read err:%v\n", err)
-				c.actions <- rtuAction{t: clientRead, err: err}
+				c.actions <- rtuAction{t: clientError, err: err}
+				c.Close()
 				break
 			}
 			r := RTU(rb[:n])

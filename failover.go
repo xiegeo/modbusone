@@ -3,20 +3,10 @@ package modbusone
 import (
 	"bytes"
 	"errors"
-	"log"
 	"strings"
 	"sync"
 	"time"
-
-	"net/http"
-	_ "net/http/pprof"
 )
-
-func init() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-}
 
 //FailoverSerialConn manages a failover connection, which does failover using
 //shared serial bus and shared slaveId. Slaves using other ids on the same
