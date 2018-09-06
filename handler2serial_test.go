@@ -25,7 +25,6 @@ func newMockSerial(name string, r io.Reader, w io.Writer) *mockSerial {
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
 	debugf("%v write %x", s.name, data)
-	//runtime.GC() //debuging: make a certain ordering of events more likely
 	n, err := s.Writer.Write(data)
 	return n, err
 }

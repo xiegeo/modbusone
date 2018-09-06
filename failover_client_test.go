@@ -12,7 +12,7 @@ import (
 	"github.com/xiegeo/coloredgoroutine"
 )
 
-var serverProcessingTime = time.Second / 2
+var serverProcessingTime = time.Second / 20
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter) {
 
@@ -118,7 +118,7 @@ func TestFailoverClient(t *testing.T) {
 		if !primaryActiveClient() {
 			t.Fatal("primaray servers should be active")
 		}
-		time.Sleep(time.Second / 10)
+		time.Sleep(serverProcessingTime * 2)
 		resetCounts()
 	})
 	//primaryActiveClient()

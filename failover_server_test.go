@@ -171,6 +171,7 @@ func TestFailoverServer(t *testing.T) {
 		if !primaryActiveServer() {
 			t.Fatal("primaray servers should be active")
 		}
+		time.Sleep(serverProcessingTime)
 		resetCounts()
 	})
 	primaryActiveServer()
