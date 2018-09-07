@@ -154,7 +154,7 @@ API stability is best effort. This means:
 
 * Code broken by API changes should not compile, new errors to user code should not be introduced silently. 
 
-* API changes will be documented to help someone losing their mind when working code stopped compiling.
+* API changes will be documented to speed adoption of new versions.
 
 My primary usage is RTU (over RS-485). Others may or may not be implemented in the future.
 
@@ -163,26 +163,28 @@ Contribution to new or existing functionally, or just changing a private identif
 ## Breaking Changes
 
 2018-09-27 v0.2.0 
-    NewRTUPacketReader returns PacketReader interface instead of io.Reader. When a new RTU server or client receives a SerialContext, it will test if it is also a PacketReader, and only create a new NewRTUPacketReader if not.
+- NewRTUPacketReader returns PacketReader interface instead of io.Reader. When a new RTU server or client receives a SerialContext, it will test if it is also a PacketReader, and only create a new NewRTUPacketReader if not.
+- (client/server).Serve() now also closes themselves when returned. This avoids some potentially bad usages. Before, the behavior was undefined.
 
-2017-06-13 v0.1.0
-    Removed dependency on goburrow/serial. All serial connections should be created with NewSerialContext, which can accept any ReadWriteCloser
+2017-06-13 pre-v0.1.0
+- Removed dependency on goburrow/serial. All serial connections should be created with NewSerialContext, which can accept any ReadWriteCloser
 
 ## Challenges
 
-Packet separation uses a mix of length and timing indications. Length is used
-if CRC is valid. Otherwise, timing indications are used to find where the next 
-packet starts. (good)
-
 Compatibility with a wide range of serial hardware/drivers. (good)
 
-Compatibility with different existing Modbus environments. (good)
+Compatibility with existing Modbus environments. (good)
 
 Recover from transmission errors and timeouts, to work continuously unattended. (good)
+
+Better test coverage that also tests error conditions. (todo) 
 
 Fuzz testing. (todo) 
 
 ## Failover mode
+
+Failover has landed in v0.2.0, but it should be considered less stable than the other parts.
+
 In mission-critical applications, or anywhere hardware redundancy is cheaper than downtime, having a standby system taking over in case of the failure of the primary system is desirable.
 
 Ideally, failover is implemented in the application level, which speaks over two serial ports simultaneously, only acting on the values from one of the ports at a time. However, this may not always be possible. A "foreign" application, which you have no control over, might not have this feature. As such, failover mode attempts to addresses this by allowing two separate hardware devices sharing a single serial bus to appear as a single device. This failover mode is outside the design of the original Modbus protocol.
