@@ -5,7 +5,7 @@ One implementation to rule them all.
 ### Architecture
 ![modbusone architecture](./modbusone_architecture.svg)
 
-For usage examples, see examples/memory and handler2serial_test.go
+For more usage examples, see examples/memory and handler2serial_test.go
 
 ## Why
 

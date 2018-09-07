@@ -21,14 +21,15 @@ type ProtocalHandler = ProtocolHandler
 //ProtocolHandler handles PDUs based on if it is a write or read from the local
 //perspective.
 type ProtocolHandler interface {
-	//OnInput is called on the server for a write request,
+
+	//OnWrite is called on the server for a write request,
 	//or on the client for read reply.
 	//For write to server on server side, data is part of req.
 	//For read from server on client side, req is the req from client, and
 	//data is part of reply.
 	OnWrite(req PDU, data []byte) error
 
-	//OnOutput is called on the server for a read request,
+	//OnRead is called on the server for a read request,
 	//or on the client before write request.
 	//For read from server on the server side, req is from client and data is
 	//part of reply.

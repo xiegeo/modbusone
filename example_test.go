@@ -27,34 +27,38 @@ func Example() {
 
 	// You can create either a client or a server from a SerialContext and an id
 	client := modbusone.NewRTUClient(clientSerialContext, id)
-	server := modbusone.NewRTUClient(serverSerialContext, id)
+	server := modbusone.NewRTUServer(serverSerialContext, id)
 
 	// Create Handler to handle client and server actions, in this example, we are only using Holding Registers
-	handler := &modbusone.SimpleHandler{
-		ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-			fmt.Printf("ReadHoldingRegisters from %v, quantity %v\n", address, quantity)
-			r := make([]uint16, quantity)
-			// application code that fills in r here
-			return r, nil
-		},
-		WriteHoldingRegisters: func(address uint16, values []uint16) error {
-			fmt.Printf("WriteHoldingRegisters from %v, quantity %v\n", address, len(values))
-			// application code here
-			return nil
-		},
-		OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
-			fmt.Printf("client handler received error:%x in request:%x", errRep, req)
-		},
+	handler := func(name string) modbusone.ProtocolHandler {
+		return &modbusone.SimpleHandler{
+			ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
+				fmt.Printf("%v ReadHoldingRegisters from %v, quantity %v\n", name, address, quantity)
+				r := make([]uint16, quantity)
+				// application code that fills in r here
+				return r, nil
+			},
+			WriteHoldingRegisters: func(address uint16, values []uint16) error {
+				fmt.Printf("%v WriteHoldingRegisters from %v, quantity %v\n", name, address, len(values))
+				// application code here
+				return nil
+			},
+			OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
+				fmt.Printf("%v received error:%x in request:%x", name, errRep, req)
+			},
+		}
 	}
+
+	termChan := make(chan error)
 
 	// Now we are ready to serve!
 	// Serve is blocking until the serial connection has errors or is closed.
-	go client.Serve(handler)
+	go client.Serve(handler("client"))
 	go func() {
-		err := server.Serve(handler)
-		_ = err
+		err := server.Serve(handler("server"))
 		// do something with the err here. For a commandline app, you probably want to terminate.
-		// For a demon, you probably want to wait until you can open the serial port again.
+		// For a service, you probably want to wait until you can open the serial port again.
+		termChan <- err
 	}()
 	defer client.Close()
 	defer server.Close()
@@ -62,25 +66,74 @@ func Example() {
 
 	// If you only need to support server side, then you are done.
 	// If you need to supoort client side, then you need to make requests.
+	startAddress := uint16(0)
+	quantity := uint16(200)
+	reqs, err := modbusone.MakePDURequestHeaders(modbusone.FcReadHoldingRegisters, startAddress, quantity, nil)
+	if err != nil {
+		fmt.Println(err) //if what you asked for is not possible.
+	}
+	// Large requests are slipt to many packets
+	fmt.Println("reqs count:", len(reqs))
+
+	// We can add more requests, even of different types.
+	// The last nil is replaced by the reqs to append to.
+	startAddress = uint16(1000)
+	quantity = uint16(100)
+	reqs, err = modbusone.MakePDURequestHeaders(modbusone.FcWriteMultipleRegisters, startAddress, quantity, reqs)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("reqs count:", len(reqs))
+
+	//client.SetServerProcessingTime(2 * time.Second)
+
+	// Range over the requests to handle each individually,
+	for _, r := range reqs {
+		err = client.DoTransaction(r)
+		if err != nil {
+			fmt.Println(err, "on", r) // The server timed out, or the connection was closed
+		}
+	}
+	// or just do them all at once. Notice that reqs can be reused.
+	n, err := modbusone.DoTransactions(client, id, reqs)
+	if err != nil {
+		fmt.Println(err, "on", reqs[n])
+	}
+
+	// Clean up
+	server.Close()
+	err = <-termChan
+	fmt.Println("serve terminated:", err)
 
 	//Output:
+	//reqs count: 2
+	//reqs count: 3
+	//server ReadHoldingRegisters from 0, quantity 125
+	//client WriteHoldingRegisters from 0, quantity 125
+	//server ReadHoldingRegisters from 125, quantity 75
+	//client WriteHoldingRegisters from 125, quantity 75
+	//client ReadHoldingRegisters from 1000, quantity 100
+	//server WriteHoldingRegisters from 1000, quantity 100
+	//server ReadHoldingRegisters from 0, quantity 125
+	//client WriteHoldingRegisters from 0, quantity 125
+	//server ReadHoldingRegisters from 125, quantity 75
+	//client WriteHoldingRegisters from 125, quantity 75
+	//client ReadHoldingRegisters from 1000, quantity 100
+	//server WriteHoldingRegisters from 1000, quantity 100
+	//serve terminated: io: read/write on closed pipe
 }
 
 type serial struct {
-	io.Reader
-	io.Writer
-	closers []io.Closer
+	io.ReadCloser
+	io.WriteCloser
 }
 
 func newInternalSerial() (io.ReadWriteCloser, io.ReadWriteCloser) {
 	r1, w1 := io.Pipe()
 	r2, w2 := io.Pipe()
-	cs := []io.Closer{r1, r2}
-	return &serial{Reader: r1, Writer: w2, closers: cs}, &serial{Reader: r2, Writer: w1, closers: cs}
+	return &serial{ReadCloser: r1, WriteCloser: w2}, &serial{ReadCloser: r2, WriteCloser: w1}
 }
 func (s *serial) Close() error {
-	for _, c := range s.closers {
-		c.Close()
-	}
-	return nil
+	s.ReadCloser.Close()
+	return s.WriteCloser.Close()
 }
