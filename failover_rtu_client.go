@@ -57,14 +57,14 @@ func (c *FailoverRTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Durat
 	return c.com.BytesDelay(l) + c.serverProcessingTime
 }
 
-//Serve serves FailoverRTUClient side handlers, must close SerialContext after error is
-//returned, to clean up.
+//Serve serves FailoverRTUClient side handlers,
 //
 //A FailoverRTUClient expects a lot of "unexpected" read packets and "lost" writes so it
-//is does not do the error checking that a normal client does, but insdead try to guess the best
+//is does not do the error checking that a normal client does, but instead try to guess the best
 //interpretation.
 func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 	debugf("serve routine for %v", c.com.describe())
+	defer c.Close()
 	go func() {
 		debugf("reader routine for %v", c.com.describe())
 		//Reader loop that always ready to received data. This make sure that read

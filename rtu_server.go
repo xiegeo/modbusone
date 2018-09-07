@@ -33,9 +33,10 @@ func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 }
 
 //Serve runs the server and only returns after unrecoverable error, such as
-//SerialContext is closed. Read is assumed to only read full packets,
-//as per RTU delay based spec.
+//SerialContext is closed.
 func (s *RTUServer) Serve(handler ProtocolHandler) error {
+	defer s.Close()
+
 	delay := s.com.MinDelay()
 
 	var rb []byte

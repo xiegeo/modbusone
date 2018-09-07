@@ -89,10 +89,9 @@ func (a clientActionType) String() string {
 	return fmt.Sprintf("clientActionType %d", a)
 }
 
-//Serve serves RTUClient side handlers, must close SerialContext after error is
-//returned, to clean up.
+//Serve serves RTUClient side handlers.
 func (c *RTUClient) Serve(handler ProtocolHandler) error {
-
+	defer c.Close()
 	go func() {
 		//Reader loop that always ready to received data. This make sure that read
 		//data is always new(ish), to dump data out that is received during an
