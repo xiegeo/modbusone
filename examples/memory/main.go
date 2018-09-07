@@ -33,18 +33,6 @@ func main() {
 	if *verbose {
 		modbusone.SetDebugOut(os.Stdout)
 	}
-	/*
-		//old github.com/goburrow/serial version
-		var com = &modbusone.SerialPort{}
-		err := com.Open(serial.Config{
-			Address:  *address,
-			BaudRate: *baudRate,
-			Parity:   *parity,
-			StopBits: *stopBits,
-
-			//Timeout: time.Hour, //a hack for https://github.com/goburrow/serial/issues/5
-		})
-	*/
 	config := serial.Config{
 		Name:     *address,
 		Baud:     *baudRate,
