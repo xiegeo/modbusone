@@ -1,10 +1,12 @@
-package modbusone
+package modbusone_test
 
 import (
 	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
+
+	. "github.com/xiegeo/modbusone"
 )
 
 func TestRTU(t *testing.T) {

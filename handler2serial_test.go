@@ -1,4 +1,4 @@
-package modbusone
+package modbusone_test
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	. "github.com/xiegeo/modbusone"
 )
 
 var _ = os.Stdin
@@ -25,7 +27,7 @@ func newMockSerial(name string, r io.Reader, w io.Writer, c ...io.Closer) *mockS
 }
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
-	debugf("%v write %x", s.name, data)
+	//debugf("%v write %x", s.name, data)
 	n, err := s.Writer.Write(data)
 	return n, err
 }

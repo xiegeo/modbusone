@@ -1,4 +1,4 @@
-package modbusone
+package modbusone_test
 
 import (
 	"fmt"
@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	. "github.com/xiegeo/modbusone"
 )
 
 type counter struct {
@@ -64,7 +66,7 @@ func setDelays(f *FailoverSerialConn) {
 	f.MissDelay = serverProcessingTime
 }
 
-func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *counter, *counter, func()) {
+func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
 
 	//pipes
 	ra, wa := io.Pipe() //server a
@@ -103,28 +105,16 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 	go serverB.Serve(shB)
 	go client.Serve(shC)
 
-	primaryActiveServer = func() bool {
-		if sa.isActive {
-			return true
-		}
-		sa.isActive = true
-		atomic.StoreInt32(&sa.misses, sa.MissesMax)
-		return false
-	}
-
-	return client, countA, countB, countC, func() {
+	return client, sa, countA, countB, countC, func() {
 		serverA.Close()
 		serverB.Close()
 		client.Close()
 	}
 }
 
-//return if primary is active, or set it to active is not already
-var primaryActiveServer func() bool
-
 func TestFailoverServer(t *testing.T) {
 	id := byte(0x77)
-	client, countA, countB, countC, close := connectToMockServers(t, id)
+	client, pc, countA, countB, countC, close := connectToMockServers(t, id)
 	defer close()
 	exCount := counter{Stats: &Stats{}}
 	resetCounts := func() {
@@ -161,13 +151,12 @@ func TestFailoverServer(t *testing.T) {
 			//activates server
 			DoTransactions(client, id, reqs)
 		}
-		if !primaryActiveServer() {
+		if !pc.IsActive() {
 			t.Fatal("primaray servers should be active")
 		}
 		time.Sleep(serverProcessingTime)
 		resetCounts()
 	})
-	primaryActiveServer()
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {

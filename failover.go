@@ -169,6 +169,13 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 	}
 }
 
+func (s *FailoverSerialConn) IsActive() bool {
+	s.lock.Lock()
+	a := s.isActive
+	s.lock.Unlock()
+	return a
+}
+
 func (s *FailoverSerialConn) describe() string {
 	b := strings.Builder{}
 	b.WriteString("FailoverSerialConn")
@@ -182,7 +189,7 @@ func (s *FailoverSerialConn) describe() string {
 	} else {
 		b.WriteString(" Primary")
 	}
-	if s.isActive {
+	if s.IsActive() {
 		b.WriteString(" Active")
 	} else {
 		b.WriteString(" Passive")
@@ -313,7 +320,7 @@ func (s *FailoverSerialConn) setLastReqTime(pdu PDU, now time.Time) {
 	s.reqPacket.Write(pdu)
 }
 
-//IsRequestReply test if PDUs are a request reply pair, useful for lessening to transactions passively.
+//IsRequestReply test if PDUs are a request reply pair, useful for listening to transactions passively.
 func IsRequestReply(r, a PDU) bool {
 	match := func() bool {
 		if r.GetFunctionCode() != a.GetFunctionCode() {

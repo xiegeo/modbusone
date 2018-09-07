@@ -1,4 +1,4 @@
-package modbusone
+package modbusone_test
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	. "github.com/xiegeo/modbusone"
 )
 
 var _ = os.Stdout

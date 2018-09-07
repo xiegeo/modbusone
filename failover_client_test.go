@@ -1,19 +1,19 @@
-package modbusone
+package modbusone_test
 
 import (
 	"fmt"
 	"io"
 	"os"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/xiegeo/coloredgoroutine"
+	. "github.com/xiegeo/modbusone"
 )
 
 var serverProcessingTime = time.Second / 20
 
-func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *counter, *counter, *counter, func()) {
+func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
 
 	//pipes
 	ra, wa := io.Pipe() //client a
@@ -53,24 +53,12 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 	go clientB.Serve(shB)
 	go server.Serve(shC)
 
-	primaryActiveClient = func() bool {
-		if ca.isActive {
-			return true
-		}
-		ca.isActive = true
-		atomic.StoreInt32(&ca.misses, ca.MissesMax)
-		return false
-	}
-
-	return clientA, clientB, countA, countB, countC, func() {
+	return clientA, clientB, ca, countA, countB, countC, func() {
 		clientA.Close()
 		clientB.Close()
 		server.Close()
 	}
 }
-
-//return if primary is active, or set it to active is not already
-var primaryActiveClient func() bool
 
 var testFailoverClientCount = 0
 
@@ -80,7 +68,7 @@ func TestFailoverClient(t *testing.T) {
 	//testCount := 20 //number of repeats of each test
 
 	id := byte(0x77)
-	clientA, clientB, countA, countB, countC, close := connectMockClients(t, id)
+	clientA, clientB, pc, countA, countB, countC, close := connectMockClients(t, id)
 	defer close()
 	exCount := &counter{Stats: &Stats{}}
 	resetCounts := func() {
@@ -119,13 +107,12 @@ func TestFailoverClient(t *testing.T) {
 			DoTransactions(clientA, id, reqs)
 			DoTransactions(clientB, id, reqs)
 		}
-		if !primaryActiveClient() {
-			t.Fatal("primaray servers should be active")
-		}
 		time.Sleep(serverProcessingTime * 2)
+		if !pc.IsActive() {
+			t.Fatal("primaray client should be active")
+		}
 		resetCounts()
 	})
-	//primaryActiveClient()
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {
