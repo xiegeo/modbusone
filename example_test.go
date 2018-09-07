@@ -1,7 +1,8 @@
-package modbusone_test
-
 //go:generate embedmd -w README.md
 //go:generate sed -i -e 's/\t/\ \ \ \ /g' README.md
+//go:generate golangci-lint run
+
+package modbusone_test
 
 import (
 	"fmt"
