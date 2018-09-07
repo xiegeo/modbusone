@@ -10,3 +10,5 @@ github.com/xiegeo/coloredgoroutine v0.1.1 h1:L6EaQHWIY+oIlKpj5ORu9hIorsLbQwTAStE
 github.com/xiegeo/coloredgoroutine v0.1.1/go.mod h1:d3jyamWlthEBXOL5qUpKOaaKSJM75HuCIn/z9f4ylrs=
 golang.org/x/sys v0.0.0-20180831094639-fa5fdf94c789 h1:T8D7l6WB3tLu+VpKvw06ieD/OhBi1XpJmG1U/FtttZg=
 golang.org/x/sys v0.0.0-20180831094639-fa5fdf94c789/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/sys v0.0.0-20180906133057-8cf3aee42992 h1:BH3eQWeGbwRU2+wxxuuPOdFBmaiBH81O8BugSjHeTFg=
+golang.org/x/sys v0.0.0-20180906133057-8cf3aee42992/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=

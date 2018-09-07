@@ -83,11 +83,11 @@ func (s *serial) Close() error {
 }
 
 func (s *serial) MinDelay() time.Duration {
-	return MinDelay(int64(s.baudRate))
+	return MinDelay(s.baudRate)
 }
 
 func (s *serial) BytesDelay(n int) time.Duration {
-	return BytesDelay(int64(s.baudRate), n)
+	return BytesDelay(s.baudRate, n)
 }
 
 func (s *serial) Stats() *Stats {

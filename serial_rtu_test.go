@@ -15,8 +15,8 @@ func TestRTU(t *testing.T) {
 	}
 
 	failCases := []RTU{
-		RTU([]byte{}),                                               //too short
-		RTU([]byte{0x02, 0x12, 0x98}),                               //too short
+		RTU([]byte{}),                 //too short
+		RTU([]byte{0x02, 0x12, 0x98}), //too short
 		RTU([]byte{0xf1, 0x10, 0x00, 0x01, 0x00, 0x02, 0x12, 0x98}), //crc error
 	}
 

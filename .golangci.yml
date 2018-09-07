@@ -1,0 +1,28 @@
+
+# golangci-lint run
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  golint:
+    min-confidence: 0
+  maligned:
+    suggest-new: true
+
+linters:
+  enable-all: true
+  disable:
+    - errcheck
+    - gocyclo
+    - lll
+
+issues:
+  exclude:
+    - "G104: Errors unhandled." # turn off errcheck
+    - "declaration of \"[a-z]\" shadows declaration at .*_test.go" # ignore shadowing a single charcter varibles in tests
+    - "receiver name [a-z]0 should be consistent with previous receiver name [a-z]" # when we want to operate on a copy
+    - "error strings should not be capitalized or end with punctuation or a newline" # doesn't matter
+    - "lines are duplicate of `crc.crc.go:" # ignore duplications in crc.go
+
+output:
+  format: line-number

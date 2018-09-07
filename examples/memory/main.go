@@ -31,7 +31,7 @@ var verbose = flag.Bool("v", false, "prints debugging information")
 func main() {
 	flag.Parse()
 	if *verbose {
-		modbusone.DebugOut = os.Stdout
+		modbusone.SetDebugOut(os.Stdout)
 	}
 	/*
 		//old github.com/goburrow/serial version
@@ -87,7 +87,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "write/read size limit is too big")
 			os.Exit(1)
 		}
-		client := modbusone.NewRTUCLient(com, id)
+		client := modbusone.NewRTUClient(com, id)
 		go runClient(client)
 		device = client
 	} else {

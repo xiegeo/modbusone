@@ -9,18 +9,6 @@ import (
 	"time"
 )
 
-type reader func(p []byte) (n int, err error)
-
-func (r reader) Read(p []byte) (n int, err error) {
-	return r(p)
-}
-
-type writer func(p []byte) (n int, err error)
-
-func (w writer) Write(p []byte) (n int, err error) {
-	return w(p)
-}
-
 type counter struct {
 	*Stats
 	reads  int64
@@ -88,9 +76,9 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *counter, *co
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial("sa", ra, wfa,ra), false, false) //server a connection
-	sb := NewFailoverConn(newMockSerial("sb", rb, wfb,rb), true, false)  //server b connection
-	cc := newMockSerial("cc", rc, wfc,rc)                                //client connection
+	sa := NewFailoverConn(newMockSerial("sa", ra, wfa, ra), false, false) //server a connection
+	sb := NewFailoverConn(newMockSerial("sb", rb, wfb, rb), true, false)  //server b connection
+	cc := newMockSerial("cc", rc, wfc, rc)                                //client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
