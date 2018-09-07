@@ -1,5 +1,7 @@
 package modbusone_test
 
+//go:generate embedmd -w README.md
+
 import (
 	"fmt"
 	"io"
@@ -15,7 +17,7 @@ func Example() {
 
 	// Open serial connections:
 	clientSerial, serverSerial := newInternalSerial()
-	// Normally we want to open a serial connetion from serial.OpenPort
+	// Normally we want to open a serial connection from serial.OpenPort
 	// such as github.com/tarm/serial.
 	// modbusone can take any io.ReadWriteCloser, so we created two that talks to each other
 	// for demonstration here.
@@ -56,7 +58,7 @@ func Example() {
 	go client.Serve(handler("client"))
 	go func() {
 		err := server.Serve(handler("server"))
-		// do something with the err here. For a commandline app, you probably want to terminate.
+		// do something with the err here. For a command line app, you probably want to terminate.
 		// For a service, you probably want to wait until you can open the serial port again.
 		termChan <- err
 	}()
@@ -65,7 +67,7 @@ func Example() {
 	// You only need to call close if you need to close or reuse a working connection without restarting the process
 
 	// If you only need to support server side, then you are done.
-	// If you need to supoort client side, then you need to make requests.
+	// If you need to support client side, then you need to make requests.
 	startAddress := uint16(0)
 	quantity := uint16(200)
 	reqs, err := modbusone.MakePDURequestHeaders(modbusone.FcReadHoldingRegisters, startAddress, quantity, nil)
@@ -84,8 +86,6 @@ func Example() {
 		fmt.Println(err)
 	}
 	fmt.Println("reqs count:", len(reqs))
-
-	//client.SetServerProcessingTime(2 * time.Second)
 
 	// Range over the requests to handle each individually,
 	for _, r := range reqs {
