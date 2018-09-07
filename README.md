@@ -71,7 +71,7 @@ func Example() {
 	if err != nil {
 		fmt.Println(err) //if what you asked for is not possible.
 	}
-	// Large requests are slipt to many packets
+	// Larger than allowed requests are split to many packets
 	fmt.Println("reqs count:", len(reqs))
 
 	// We can add more requests, even of different types.
