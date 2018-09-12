@@ -12,9 +12,9 @@ import (
 )
 
 type counter struct {
-	*Stats
-	reads  int64
+	reads  int64 //first for alignment
 	writes int64
+	*Stats
 }
 
 func (c *counter) total() int64 {

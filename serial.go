@@ -19,9 +19,9 @@ type SerialContext interface {
 }
 
 type serial struct {
+	s        Stats //first for alignment
 	conn     io.ReadWriteCloser
 	baudRate int64
-	s        Stats
 }
 
 //Stats records statics on a SerialContext
@@ -63,7 +63,7 @@ func (s *Stats) String() string {
 
 //NewSerialContext creates a SerialContext from any io.ReadWriteCloser
 func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
-	return &serial{conn, baudRate, Stats{}}
+	return &serial{s: Stats{}, conn: conn, baudRate: baudRate}
 }
 
 //Read reads the serial port
