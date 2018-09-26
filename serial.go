@@ -24,7 +24,7 @@ type serial struct {
 	baudRate int64
 }
 
-//Stats records statics on a SerialContext
+//Stats records statics on a SerialContext, must be aligned to 64 bits on 32 bit systems.
 type Stats struct {
 	ReadPackets      int64
 	CrcErrors        int64
