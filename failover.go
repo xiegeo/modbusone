@@ -136,7 +136,8 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			s.isActive = false
 			s.misses = 0
 			s.resetRequestTime()
-			debugf("primary found, going from active to passive")
+			debugf("primary found, going from active to passive\n")
+			debugf("reset misses\n")
 			continue //throw away and read again
 
 		} else {
@@ -148,6 +149,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			}
 			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
 				s.misses++
+				debugf("%v misses\n", s.misses)
 				if s.misses > s.MissesMax {
 					s.isActive = true
 				} else {
@@ -156,14 +158,17 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				return n, nil
 			}
 
-			s.misses = 0
 			if IsRequestReply(s.reqPacket.Bytes(), pdu) {
 				s.resetRequestTime()
 				debugf("ignore read of reply from the other server")
+				s.misses = 0
+				debugf("reset misses (server passive read)\n")
 				continue
 			}
 			debugf("switch around request and reply pairs")
 			s.setLastReqTime(pdu, now)
+			s.misses++
+			debugf("%v misses\n", s.misses)
 			return n, nil
 		}
 	}
@@ -189,7 +194,7 @@ func (s *FailoverSerialConn) describe() string {
 	} else {
 		b.WriteString(" Primary")
 	}
-	if s.IsActive() {
+	if s.isActive {
 		b.WriteString(" Active")
 	} else {
 		b.WriteString(" Passive")
@@ -210,6 +215,7 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 	s.lock.Lock()
 	defer func() {
 		s.misses = 0
+		debugf("reset misses (client read)\n")
 		s.lock.Unlock()
 	}()
 
@@ -249,7 +255,7 @@ func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 func (s *FailoverSerialConn) Write(b []byte) (int, error) {
 	s.lock.Lock()
 	locked := true
-	debugf("start write c %v, a %v, f %v\n", s.isClient, s.isActive, s.isFailover)
+	debugf("start write %v\n", s.describe())
 	defer func() {
 		if locked {
 			s.lock.Unlock()

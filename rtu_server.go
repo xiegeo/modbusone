@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -151,7 +153,12 @@ func SetDebugOut(w io.Writer) {
 	DebugOut = w
 }
 
+const monkey = false
+
 func debugf(format string, a ...interface{}) {
+	if monkey && rand.Float32() < 0.5 {
+		runtime.Gosched()
+	}
 	debugLock.Lock()
 	defer debugLock.Unlock()
 	if DebugOut == nil {

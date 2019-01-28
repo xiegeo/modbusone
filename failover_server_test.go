@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/xiegeo/coloredgoroutine"
 	. "github.com/xiegeo/modbusone"
 )
 
@@ -135,7 +136,8 @@ func TestFailoverServer(t *testing.T) {
 	}
 
 	_ = os.Stdout
-	//SetDebugOut(os.Stdout)
+	_ = coloredgoroutine.Colors
+	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
 	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
@@ -151,15 +153,15 @@ func TestFailoverServer(t *testing.T) {
 			//activates server
 			DoTransactions(client, id, reqs)
 		}
+		time.Sleep(serverProcessingTime * 2)
 		if !pc.IsActive() {
 			t.Fatal("primaray servers should be active")
 		}
-		time.Sleep(serverProcessingTime)
-		resetCounts()
 	})
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {
+			resetCounts()
 			reqs, err := MakePDURequestHeadersSized(ts.fc, 0, ts.size, 1, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -168,7 +170,7 @@ func TestFailoverServer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			time.Sleep(serverProcessingTime)
+			time.Sleep(serverProcessingTime * 2)
 			if ts.fc.IsWriteToServer() {
 				exCount.writes += int64(ts.size)
 			} else {
@@ -186,7 +188,6 @@ func TestFailoverServer(t *testing.T) {
 				t.Error("server b counter", countB)
 				t.Error("expected        ", exCount)
 			}
-			resetCounts()
 		})
 	}
 }

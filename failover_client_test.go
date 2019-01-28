@@ -11,7 +11,7 @@ import (
 	. "github.com/xiegeo/modbusone"
 )
 
-var serverProcessingTime = time.Second / 20
+var serverProcessingTime = time.Second
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
 
@@ -64,8 +64,6 @@ var testFailoverClientCount = 0
 
 func TestFailoverClient(t *testing.T) {
 	//t.Skip()
-	//errorRate := 3  //number of failures allowed for fuzzyness of each test
-	//testCount := 20 //number of repeats of each test
 
 	id := byte(0x77)
 	clientA, clientB, pc, countA, countB, countC, close := connectMockClients(t, id)
@@ -90,7 +88,7 @@ func TestFailoverClient(t *testing.T) {
 
 	_ = os.Stdout
 	_ = coloredgoroutine.Colors
-	//SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
 	testFailoverClientCount++
 	//fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
 	defer func() {
@@ -111,11 +109,11 @@ func TestFailoverClient(t *testing.T) {
 		if !pc.IsActive() {
 			t.Fatal("primaray client should be active")
 		}
-		resetCounts()
 	})
 
 	for i, ts := range testCases {
 		t.Run(fmt.Sprintf("normal %v fc:%v size:%v", i, ts.fc, ts.size), func(t *testing.T) {
+			resetCounts()
 			if ts.fc.IsReadToServer() {
 				exCount.writes += int64(ts.size)
 			} else {
@@ -154,7 +152,6 @@ func TestFailoverClient(t *testing.T) {
 				t.Error("expected        ", exCount)
 				t.Error(countB.Stats)
 			}
-			resetCounts()
 		})
 	}
 }
