@@ -1,10 +1,12 @@
 package modbusone_test
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,16 +16,18 @@ import (
 var _ = os.Stdin
 
 type mockSerial struct {
-	io.Reader
+	s Stats
+	*bufio.Reader
 	io.Writer
 	closers     []io.Closer
 	name        string
 	LastWritten []byte
-	s           Stats
+	readLock    sync.Mutex
 }
 
 func newMockSerial(name string, r io.Reader, w io.Writer, c ...io.Closer) *mockSerial {
-	return &mockSerial{Reader: r, Writer: w, closers: c, name: name}
+	br := bufio.NewReaderSize(r, 256)
+	return &mockSerial{Reader: br, Writer: w, closers: c, name: name}
 }
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
@@ -31,6 +35,22 @@ func (s *mockSerial) Write(data []byte) (int, error) {
 	n, err := s.Writer.Write(data)
 	return n, err
 }
+
+func (s *mockSerial) Read(p []byte) (int, error) {
+	s.readLock.Lock()
+	n, err := s.Reader.Read(p)
+	s.readLock.Unlock()
+	if err == nil {
+		go func() {
+			//fill reader buffer
+			s.readLock.Lock()
+			s.Reader.Peek(1)
+			s.readLock.Unlock()
+		}()
+	}
+	return n, err
+}
+
 func (s *mockSerial) Close() error {
 	for _, c := range s.closers {
 		c.Close()

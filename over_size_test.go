@@ -45,20 +45,19 @@ func TestOverSize(t *testing.T) {
 	rtu := MakeRTU(slaveID, pdu)
 	cct.Write([]byte(rtu))
 
-	rep := make([]byte, 1000)
-	nchan := make(chan int)
+	bchan := make(chan []byte)
 	go func() {
-		n, err := cct.Read(rep)
+		b := make([]byte, 1000)
+		n, err := cct.Read(b)
 		if n == 0 && err != nil {
 			return
 		}
-		nchan <- n
+		bchan <- b[:n]
 	}()
 	timeout := time.NewTimer(time.Second / 20)
-	var n int
 	select {
-	case n = <-nchan:
-		t.Fatalf("should not complete read %x", rep[:n])
+	case b := <-bchan:
+		t.Fatalf("should not complete read %x", b)
 	case <-timeout.C:
 	}
 
@@ -74,18 +73,19 @@ func TestOverSize(t *testing.T) {
 	cc.Write([]byte(rtu))
 	go func() {
 		for {
-			n, err := cc.Read(rep)
+			b := make([]byte, 1000)
+			n, err := cc.Read(b)
 			if n == 0 && err != nil {
 				return
 			}
-			nchan <- n
+			bchan <- b[:n]
 		}
 	}()
 	timeout.Reset(time.Second)
 	select {
-	case n = <-nchan:
-		if "1110000000c8c30f" != fmt.Sprintf("%x", rep[:n]) {
-			t.Fatalf("got unexpected read %x", rep[:n])
+	case b := <-bchan:
+		if "1110000000c8c30f" != fmt.Sprintf("%x", b) {
+			t.Fatalf("got unexpected read %x", b)
 		}
 	case <-timeout.C:
 		t.Fatalf("should not time out")
@@ -97,10 +97,10 @@ func TestOverSize(t *testing.T) {
 	cc.Write([]byte(rtu))
 
 	select {
-	case n = <-nchan:
+	case b := <-bchan:
 		//0x90 is from 200 * 2 = 0x0190
-		if "1103900000" != fmt.Sprintf("%x", rep[:5]) {
-			t.Fatalf("got unexpected read %x", rep[:n])
+		if "1103900000" != fmt.Sprintf("%x", b[:5]) {
+			t.Fatalf("got unexpected read %x", b)
 		}
 	case <-timeout.C:
 		t.Fatalf("should not time out")
