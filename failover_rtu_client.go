@@ -74,13 +74,13 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 			rb := make([]byte, MaxRTUSize)
 			n, err := c.packetReader.Read(rb)
 			if err != nil {
-				debugf("RTUClient read err:%v\n", err)
+				debugf("FailoverRTUClient read err:%v\n", err)
 				c.actions <- rtuAction{t: clientError, err: err}
 				c.Close()
 				break
 			}
 			r := RTU(rb[:n])
-			debugf("RTUClient read packet:%v\n", hex.EncodeToString(r))
+			debugf("FailoverRTUClient read packet:%v\n", hex.EncodeToString(r))
 			c.actions <- rtuAction{t: clientRead, data: r}
 		}
 	}()
@@ -134,7 +134,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		default:
 			readUnexpected(act, func() {
 				atomic.AddInt64(&c.com.Stats().OtherDrops, 1)
-				debugf("RTUClient drop unexpected: %v", act)
+				debugf("FailoverRTUClient drop unexpected: %v", act)
 			})
 			continue
 		case clientError:
@@ -162,6 +162,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		active := c.com.isActive
 		c.com.lock.Unlock()
 		if act.data[0] == 0 || !active {
+			debugf("FailoverRTUClient skip action:%v\n", act)
 			time.Sleep(c.com.BytesDelay(len(act.data)))
 			act.errChan <- nil //always success
 			continue           // do not wait for read on multicast or when not active
@@ -192,7 +193,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 				}
 				if react.data[0] != act.data[0] {
 					atomic.AddInt64(&c.com.Stats().IDDrops, 1)
-					debugf("RTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
+					debugf("FailoverRTUClient unexpected slaveId:%v in %v\n", act.data[0], hex.EncodeToString(react.data))
 					break SELECT
 				}
 				rp, err := react.data.GetPDU()
