@@ -130,9 +130,9 @@ func TestFailoverServer(t *testing.T) {
 		size uint16
 	}
 	testCases := []tc{
-		{FcWriteSingleRegister, 20},
-		{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 20},
+		{FcWriteSingleRegister, 5},
+		{FcWriteMultipleRegisters, 5},
+		{FcReadHoldingRegisters, 5},
 	}
 
 	_ = os.Stdout

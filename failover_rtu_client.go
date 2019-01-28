@@ -163,7 +163,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		c.com.lock.Unlock()
 		if act.data[0] == 0 || !active {
 			debugf("FailoverRTUClient skip action:%v\n", act)
-			time.Sleep(c.com.BytesDelay(len(act.data)))
+			time.Sleep(c.com.BytesDelay(len(act.data)) + c.serverProcessingTime)
 			act.errChan <- nil //always success
 			continue           // do not wait for read on multicast or when not active
 		}

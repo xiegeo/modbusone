@@ -55,7 +55,7 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 		SerialContext:          sc,
 		isClient:               isClient,
 		isFailover:             isFailover,
-		PrimaryDisconnectDelay: 3 * time.Second,
+		PrimaryDisconnectDelay: 10 * time.Second,
 		PrimaryForceBackDelay:  10 * time.Minute,
 		SecondaryDelay:         time.Second / 10,
 		MissDelay:              time.Second / 5,

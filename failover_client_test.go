@@ -81,9 +81,9 @@ func TestFailoverClient(t *testing.T) {
 		size uint16
 	}
 	testCases := []tc{
-		{FcWriteSingleRegister, 20},
-		{FcWriteMultipleRegisters, 20},
-		{FcReadHoldingRegisters, 20},
+		{FcWriteSingleRegister, 5},
+		{FcWriteMultipleRegisters, 5},
+		{FcReadHoldingRegisters, 5},
 	}
 
 	_ = os.Stdout
@@ -96,16 +96,16 @@ func TestFailoverClient(t *testing.T) {
 	}()
 
 	t.Run("cold start", func(t *testing.T) {
-		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)
+		reqs, err := MakePDURequestHeadersSized(FcWriteSingleRegister, 0, 1, 1, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for i := 0; i < 5; /*MissesMax*/ i++ {
 			//activates client
-			DoTransactions(clientA, id, reqs)
+			go DoTransactions(clientA, id, reqs)
 			DoTransactions(clientB, id, reqs)
 		}
-		time.Sleep(serverProcessingTime * 2)
+		time.Sleep(serverProcessingTime)
 		if !pc.IsActive() {
 			t.Fatal("primaray client should be active")
 		}
@@ -123,17 +123,8 @@ func TestFailoverClient(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			go DoTransactions(clientB, id, reqs)
-			DoTransactions(clientA, id, reqs)
-
-			for i := uint16(0); i < ts.size; i++ {
-				time.Sleep(serverProcessingTime)
-				if exCount.total() <= countA.total() ||
-					exCount.total() <= countB.total() ||
-					exCount.total() <= countC.total() {
-					break
-				}
-			}
+			go DoTransactions(clientA, id, reqs)
+			DoTransactions(clientB, id, reqs)
 
 			time.Sleep(serverProcessingTime)
 
