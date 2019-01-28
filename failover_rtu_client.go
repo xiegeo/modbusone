@@ -103,6 +103,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 			if last.Len() != 0 {
 				atomic.AddInt64(&c.com.Stats().OtherDrops, 1)
 			}
+			debugf("failover client serve set last: %x", pdu)
 			last.Reset()
 			last.Write(pdu)
 			return
