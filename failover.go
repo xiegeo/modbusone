@@ -43,8 +43,8 @@ type FailoverSerialConn struct {
 	//Default 0.2 seconds.
 	MissDelay time.Duration
 
-	//how many misses is the primary detected as down
-	//default 5
+	//how many misses is the other detected as down
+	//default 2 for primary, 4 for failover
 	MissesMax int32
 	misses    int32
 }
@@ -60,7 +60,7 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 		SecondaryDelay:         time.Second / 10,
 		MissDelay:              time.Second / 5,
 		startTime:              time.Now(),
-		MissesMax:              3,
+		MissesMax:              2,
 	}
 	if isFailover {
 		c.MissesMax += 2
@@ -147,7 +147,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				s.setLastReqTime(pdu, now)
 				return n, nil
 			}
-			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
+			incMisses := func() {
 				s.misses++
 				debugf("%v misses\n", s.misses)
 				if s.misses > s.MissesMax {
@@ -155,6 +155,9 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 				} else {
 					s.setLastReqTime(pdu, now)
 				}
+			}
+			if now.Sub(s.requestTime) > s.MissDelay+s.BytesDelay(n) {
+				incMisses()
 				return n, nil
 			}
 
@@ -167,8 +170,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			}
 			debugf("switch around request and reply pairs")
 			s.setLastReqTime(pdu, now)
-			s.misses++
-			debugf("%v misses\n", s.misses)
+			incMisses()
 			return n, nil
 		}
 	}

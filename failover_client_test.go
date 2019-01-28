@@ -100,7 +100,7 @@ func TestFailoverClient(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for i := 0; i < 5; /*MissesMax*/ i++ {
+		for i := 0; i < 3; /*MissesMax*/ i++ {
 			//activates client
 			go DoTransactions(clientA, id, reqs)
 			DoTransactions(clientB, id, reqs)

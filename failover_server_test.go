@@ -149,7 +149,7 @@ func TestFailoverServer(t *testing.T) {
 		if err == nil {
 			t.Fatal("cold start, not expecting any active servers")
 		}
-		for i := 0; i < 5; /*ServerMissesMax*/ i++ {
+		for i := 0; i < 3; /*ServerMissesMax*/ i++ {
 			//activates server
 			DoTransactions(client, id, reqs)
 		}
