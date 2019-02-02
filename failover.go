@@ -88,7 +88,7 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 		}
 		n, err := s.PacketReader.Read(b)
 		if err != nil {
-			return n, err
+			return n, err //only real io errors are exposed
 		}
 		s.lock.Lock()
 		locked = true
@@ -115,7 +115,9 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 		pdu, err := rtu.GetPDU()
 		if err != nil {
 			debugf("failover serverRead internal GetPDU error : %v", err)
-			return n, err //bubbles formate up errors
+			s.misses = 0
+			debugf("reset misses\n")
+			continue //throw away and read again
 		}
 		if rtu[0] == 0 {
 			//zero slave id do not have a reply, so we won't expect one
