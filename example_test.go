@@ -59,9 +59,11 @@ func Example() {
 	termChan := make(chan error)
 
 	// Now we are ready to serve!
-	// Serve is blocking until the serial connection has errors or is closed.
+	// Serve is blocking until the serial connection has io errors or is closed.
+	// So we use a goroutine to start it and continue setting up our demo.
 	go client.Serve(handler("client"))
 	go func() {
+		//A server is Started to same way as a client
 		err := server.Serve(handler("server"))
 		// Do something with the err here.
 		// For a command line app, you probably want to terminate.

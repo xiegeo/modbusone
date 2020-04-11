@@ -9,15 +9,16 @@ import (
 )
 
 //FailoverSerialConn manages a failover connection, which does failover using
-//shared serial bus and shared slaveId. Slaves using other ids on the same
+//shared serial bus and shared slaveID. Slaves using other ids on the same
 //bus is not supported. If the other side supports multiple slave ids, then
-//it is best to implement failover on the other side by call different slaveIds.
+//it is better to implement failover on the other side by call different slaveIDs,
+//or using separated serial ports.
 type FailoverSerialConn struct {
 	SerialContext //base SerialContext
 	PacketReader
-	isClient   bool //client or server
-	isFailover bool //primary or failover
-	isActive   bool //use atomic, active or passive
+	isClient   bool //client or server, read only after initial setup
+	isFailover bool //primary or failover, read only after initial setup
+	isActive   bool //active or passive, change protected by lock
 	lock       sync.Mutex
 
 	requestTime time.Time //time of the last packet observed passively
@@ -25,12 +26,14 @@ type FailoverSerialConn struct {
 	lastRead    time.Time
 
 	//if primary has not received data for this long, it thinks it's disconnected
-	//and go passive, just like at restart
+	//and go passive, just like at restart.
+	//This potentially allows a long running passive with better data to take over
+	//until primary has gained enough historical data.
 	//default 10 seconds
 	PrimaryDisconnectDelay time.Duration
 
 	//when a failover is running,
-	//how long should it wait to take over again.
+	//the time it waits to take over again.
 	//default 10 mins
 	PrimaryForceBackDelay time.Duration
 	startTime             time.Time
@@ -43,7 +46,7 @@ type FailoverSerialConn struct {
 	//Default 0.2 seconds.
 	MissDelay time.Duration
 
-	//how many misses is the other detected as down
+	//number of misses until the other is detected as down
 	//default 2 for primary, 4 for failover
 	MissesMax int32
 	misses    int32
@@ -178,6 +181,9 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 	}
 }
 
+// IsActive returns if the connetion is in the active state.
+// This state can change asynchronous so it is not useful for logic
+// other than status gethering or testing in a controlled envernment.
 func (s *FailoverSerialConn) IsActive() bool {
 	s.lock.Lock()
 	a := s.isActive

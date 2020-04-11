@@ -11,7 +11,7 @@ import (
 	. "github.com/xiegeo/modbusone"
 )
 
-var serverProcessingTime = time.Second
+var serverProcessingTime = time.Second / 5
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
 

@@ -54,9 +54,11 @@ func Example() {
     termChan := make(chan error)
 
     // Now we are ready to serve!
-    // Serve is blocking until the serial connection has errors or is closed.
+    // Serve is blocking until the serial connection has io errors or is closed.
+    // So we use a goroutine to start it and continue setting up our demo.
     go client.Serve(handler("client"))
     go func() {
+        //A server is Started to same way as a client
         err := server.Serve(handler("server"))
         // Do something with the err here.
         // For a command line app, you probably want to terminate.
@@ -130,6 +132,7 @@ func Example() {
 For more usage examples, see examples/memory, which is a command line application that can be used as either a server or a client.
 
 ### Architecture
+
 ![modbusone architecture](./modbusone_architecture.svg)
 
 ## Why
@@ -144,6 +147,7 @@ This means that a remote function call like API, which is effective as a client-
 Instead, a callback based API (like http server handler) is used for both server and client.
 
 ## Implemented
+
 - Serial RTU
 - Function Codes 1-6,15,16
 - Server and Client API
@@ -153,25 +157,27 @@ Instead, a callback based API (like http server handler) is used for both server
 
 This project is mostly stable, and I am using it in production.
 
-API stability is best effort. This means: 
+API stability is best effort. This means:
 
-* Changes should not break users code unless there is a compelling reason.
+- Changes should not break users code unless there is a compelling reason.
 
-* Code broken by API changes should not compile, new errors to user code should not be introduced silently. 
+- Code broken by API changes should not compile, new errors to user code should not be introduced silently. 
 
-* API changes will be documented to speed adoption of new versions.
+- API changes will be documented to speed adoption of new versions.
 
 My primary usage is RTU (over RS-485). Others may or may not be implemented in the future.
 
-Contribution to new or existing functionally, or just changing a private identifier public are welcome, as well as documentation, test, example code or any other improvements. 
+Contribution to new or existing functionally, or just changing a private identifier public are welcome, as well as documentation, test, example code or any other improvements.
 
 ## Breaking Changes
 
-2018-09-27 v0.2.0 
+2018-09-27 v0.2.0
+
 - NewRTUPacketReader returns PacketReader interface instead of io.Reader. When a new RTU server or client receives a SerialContext, it will test if it is also a PacketReader, and only create a new NewRTUPacketReader if not.
 - (client/server).Serve() now also closes themselves when returned. This avoids some potentially bad usages. Before, the behavior was undefined.
 
 2017-06-13 pre-v0.1.0
+
 - Removed dependency on goburrow/serial. All serial connections should be created with NewSerialContext, which can accept any ReadWriteCloser
 
 ## Challenges
