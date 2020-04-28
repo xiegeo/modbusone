@@ -68,7 +68,6 @@ func setDelays(f *FailoverSerialConn) {
 }
 
 func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
-
 	//pipes
 	ra, wa := io.Pipe() //server a
 	rb, wb := io.Pipe() //server b

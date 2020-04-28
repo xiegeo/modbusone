@@ -15,7 +15,13 @@ linters:
     - errcheck
     - gochecknoglobals
     - gocyclo
+    - gocognit
     - lll
+    - gomnd
+    - wsl
+    - scopelint
+    - funlen
+    - nestif
 
 issues:
   exclude:
@@ -24,6 +30,8 @@ issues:
     - "receiver name [a-z]0 should be consistent with previous receiver name [a-z]" # when we want to operate on a copy
     - "error strings should not be capitalized or end with punctuation or a newline" # doesn't matter
     - "lines are duplicate of `crc.crc.go:" # ignore duplications in crc.go
+    - "package should be `crc_test` instead of `crc`" # ignore white listed internal testing
+    - "Top level comment should end in a period" 
 
 output:
   format: line-number

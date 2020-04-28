@@ -14,7 +14,6 @@ import (
 var serverProcessingTime = time.Second / 5
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
-
 	//pipes
 	ra, wa := io.Pipe() //client a
 	rb, wb := io.Pipe() //client b

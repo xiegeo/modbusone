@@ -13,7 +13,6 @@ import (
 var _ = os.Stdout
 
 func connectToMockServer(slaveID byte) io.ReadWriteCloser {
-
 	r1, w1 := io.Pipe() //pipe from client to server
 	r2, w2 := io.Pipe() //pipe from server to client
 

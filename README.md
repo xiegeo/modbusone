@@ -7,7 +7,6 @@ One implementation to rule them all.
 [embedmd]:# (example_test.go /func Example/ /^}/)
 ```go
 func Example() {
-
     // Server id and baudRate, for Modbus over serial port.
     id := byte(1)
     baudRate := int64(19200)

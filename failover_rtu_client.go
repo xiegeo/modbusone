@@ -44,7 +44,7 @@ func NewFailoverRTUClient(com SerialContext, isFailover bool, slaveID byte) *Fai
 }
 
 //SetServerProcessingTime sets the time to wait for a server response, the total
-//wait time also includes the time needed for data transmission
+//wait time also includes the time needed for data transmission.
 func (c *FailoverRTUClient) SetServerProcessingTime(t time.Duration) {
 	c.serverProcessingTime = t
 }
@@ -243,7 +243,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 	}
 }
 
-//Close closes the client and closes the connect
+//Close closes the client and closes the connect.
 func (c *FailoverRTUClient) Close() error {
 	return c.com.Close()
 }

@@ -52,7 +52,7 @@ type FailoverSerialConn struct {
 	misses    int32
 }
 
-//NewFailoverConn adds failover function to a SerialContext
+// NewFailoverConn adds failover function to a SerialContext.
 func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
 		SerialContext:          sc,
@@ -72,7 +72,7 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 	return c
 }
 
-//BytesDelay implements BytesDelay for SerialContext
+// BytesDelay implements BytesDelay for SerialContext.
 func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
 	return s.SerialContext.BytesDelay(n)
 }
@@ -144,7 +144,6 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 			debugf("primary found, going from active to passive\n")
 			debugf("reset misses\n")
 			continue //throw away and read again
-
 		} else {
 			//we are passive here
 			now := time.Now()
@@ -249,7 +248,7 @@ func (s *FailoverSerialConn) clientRead(b []byte) (int, error) {
 	return n, nil
 }
 
-//Read reads the serial port
+// Read reads the serial port.
 func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 	defer func() {
 		s.lock.Lock()

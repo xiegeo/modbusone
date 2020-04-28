@@ -61,7 +61,7 @@ const (
 	//FcReadFIFOQueue              FunctionCode = 24 //not supported for now
 )
 
-//Valid test if FunctionCode is a supported function, and not an error response
+//Valid test if FunctionCode is a supported function, and not an error response.
 func (f FunctionCode) Valid() bool {
 	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
 }
@@ -290,7 +290,7 @@ func (p PDU) ValidateRequest() error {
 
 //GetFunctionCode returns the function code
 func (p PDU) GetFunctionCode() FunctionCode {
-	if len(p) <= 0 {
+	if len(p) == 0 {
 		return FunctionCode(0)
 	}
 	return FunctionCode(p[0])
