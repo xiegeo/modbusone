@@ -4,9 +4,32 @@ One implementation to rule them all.
 <details>
   <summary>Example</summary>
 
-[embedmd]:# (example_test.go /func Example/ /^}/)
+[embedmd]:# (examples_test.go /\/\/ handlerGenerator/ /end readme example/)
 ```go
-func Example() {
+// handlerGenerator returns ProtocolHandlers that interact with our application.
+// In this example, we are only using Holding Registers.
+func handlerGenerator(name string) modbusone.ProtocolHandler {
+    return &modbusone.SimpleHandler{
+        ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
+            fmt.Printf("%v ReadHoldingRegisters from %v, quantity %v\n",
+                name, address, quantity)
+            r := make([]uint16, quantity)
+            // application code that fills in r here
+            return r, nil
+        },
+        WriteHoldingRegisters: func(address uint16, values []uint16) error {
+            fmt.Printf("%v WriteHoldingRegisters from %v, quantity %v\n",
+                name, address, len(values))
+            // application code here
+            return nil
+        },
+        OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
+            fmt.Printf("%v received error:%x in request:%x", name, errRep, req)
+        },
+    }
+}
+
+func Example_serialPort() {
     // Server id and baudRate, for Modbus over serial port.
     id := byte(1)
     baudRate := int64(19200)
@@ -28,27 +51,7 @@ func Example() {
     server := modbusone.NewRTUServer(serverSerialContext, id)
 
     // Create Handler to handle client and server actions.
-    // In this example, we are only using Holding Registers.
-    handler := func(name string) modbusone.ProtocolHandler {
-        return &modbusone.SimpleHandler{
-            ReadHoldingRegisters: func(address, quantity uint16) ([]uint16, error) {
-                fmt.Printf("%v ReadHoldingRegisters from %v, quantity %v\n",
-                    name, address, quantity)
-                r := make([]uint16, quantity)
-                // application code that fills in r here
-                return r, nil
-            },
-            WriteHoldingRegisters: func(address uint16, values []uint16) error {
-                fmt.Printf("%v WriteHoldingRegisters from %v, quantity %v\n",
-                    name, address, len(values))
-                // application code here
-                return nil
-            },
-            OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
-                fmt.Printf("%v received error:%x in request:%x", name, errRep, req)
-            },
-        }
-    }
+    handler := handlerGenerator
 
     termChan := make(chan error)
 
@@ -124,13 +127,13 @@ func Example() {
     //client ReadHoldingRegisters from 1000, quantity 100
     //server WriteHoldingRegisters from 1000, quantity 100
     //serve terminated: io: read/write on closed pipe
-}
+} //end readme example
 ```
 
 </details>
 For more usage examples, see examples/memory, which is a command line application that can be used as either a server or a client.
 
-### Architecture
+## Architecture
 
 ![modbusone architecture](./modbusone_architecture.svg)
 

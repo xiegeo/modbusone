@@ -6,11 +6,19 @@ package modbusone
 
 import (
 	"fmt"
+	"io"
 )
 
-//Server is the common interface for all Clients and Servers that use ProtocolHandlers
+// Server is a common interface for all Clients and Servers that use ProtocolHandlers.
+// Deprecated: added Closer in ServerCloser
 type Server interface {
 	Serve(handler ProtocolHandler) error
+}
+
+// ServerCloser is the common interface for all Clients and Servers that use ProtocolHandlers.
+type ServerCloser interface {
+	Server
+	io.Closer
 }
 
 //ProtocalHandler is a misspelling of ProtocolHandler

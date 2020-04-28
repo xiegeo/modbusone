@@ -18,8 +18,15 @@ type RTUClient struct {
 	actions              chan rtuAction
 }
 
-//RTUClient is a Server
-var _ Server = &RTUClient{}
+//Client interface can both start and serve transactions
+type Client interface {
+	ServerCloser
+	RTUTransactionStarter
+	DoTransaction(req PDU) error
+}
+
+//RTUClient is a Client
+var _ Client = &RTUClient{}
 
 //NewRTUCLient is an miscapitalization of NewRTUClient
 //
@@ -29,7 +36,7 @@ func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 }
 
 //NewRTUClient create a new client communicating over SerialContext with the
-//give slaveID as default.
+//given slaveID as default.
 func NewRTUClient(com SerialContext, slaveID byte) *RTUClient {
 	pr, ok := com.(PacketReader)
 	if !ok {
@@ -89,7 +96,7 @@ func (a clientActionType) String() string {
 	return fmt.Sprintf("clientActionType %d", a)
 }
 
-//Serve serves RTUClient side handlers.
+//Serve serves RTUClient handlers.
 func (c *RTUClient) Serve(handler ProtocolHandler) error {
 	defer c.Close()
 	go func() {
@@ -236,7 +243,7 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 }
 
 //StartTransactionToServer starts a transaction, with a custom slaveID.
-//errChan is required and usable, an error is set is the transaction failed, or
+//errChan is required, an error is set is the transaction failed, or
 //nil for success.
 //
 //StartTransactionToServer is not blocking.
