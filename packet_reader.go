@@ -22,17 +22,18 @@ type rtuPacketReader struct {
 	isClient      bool
 	bidirectional bool
 	last          []byte
+	lastReadAt    time.Time
 }
 
 //NewRTUPacketReader create a Reader that attempt to read full packets.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
-	return &rtuPacketReader{r, isClient, false, nil}
+	return &rtuPacketReader{r: r, isClient: isClient}
 }
 
 //NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
 //that comes from either server or client.
 func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
-	return &rtuPacketReader{r, false, true, nil}
+	return &rtuPacketReader{r: r, bidirectional: true}
 }
 
 func (s *rtuPacketReader) PacketReaderFace() {}
@@ -46,8 +47,19 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			read += copy(p, s.last)
 			s.last = s.last[:0]
 		} else {
-			//time.Sleep(time.Duration(rand.Int63n(int64(time.Second))))
+			// time.Sleep(time.Duration(rand.Int63n(int64(time.Second / 10))))
 			n, err := s.r.Read(p[read:])
+			now := time.Now()
+			if read != 0 {
+				cutoffDuration := GetPacketCutoffDurationFromSerialContext(s.r, n)
+				readDuration := now.Sub(s.lastReadAt)
+				if readDuration > cutoffDuration {
+					debugf("RTUPacketReader read took:%v > %v, reset packet", readDuration, cutoffDuration)
+					atomic.AddInt64(&s.r.Stats().OtherDrops, 1)
+					return read + n, err
+				}
+			}
+			s.lastReadAt = now
 			debugf("RTUPacketReader read (%v+%v)/%v %v, expected %v", read, n, len(p), err, expected)
 			read += n
 			if err != nil || read == len(p) {

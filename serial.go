@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// DefaultCPUHiccup is the max amount of time the local host is allowed to freeze before we break packets appeart
+// and throw away old unused partial packet data.
+var DefaultCPUHiccup = time.Second / 10
+
 //SerialContext is an interface implemented by SerialPort, can also be mocked for testing.
 type SerialContext interface {
 	io.ReadWriteCloser
@@ -18,10 +22,27 @@ type SerialContext interface {
 	Stats() *Stats
 }
 
+// SerialContextV2 is an supperset interface of SerialContext, to support customizing
+// cpu hiccup time.
+type SerialContextV2 interface {
+	SerialContext
+	// PacketCutoffDuration returns the duration to force packet breaks,
+	// with the duration it took to read current data considered.
+	PacketCutoffDuration(n int) time.Duration
+}
+
 type serial struct {
 	s        Stats //first for alignment
 	conn     io.ReadWriteCloser
 	baudRate int64
+	Option
+}
+
+var _ SerialContextV2 = &serial{} // serial implements SerialContextV2
+
+type Option struct {
+	CPUHiccup          time.Duration
+	ReturnShortPackets bool
 }
 
 //Stats records statics on a SerialContext, must be aligned to 64 bits on 32 bit systems.
@@ -66,6 +87,10 @@ func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate}
 }
 
+func NewSerialContextWithOption(conn io.ReadWriteCloser, baudRate int64, option Option) SerialContext {
+	return &serial{s: Stats{}, conn: conn, baudRate: baudRate, Option: option}
+}
+
 //Read reads the serial port
 func (s *serial) Read(b []byte) (int, error) {
 	n, err := s.conn.Read(b)
@@ -94,6 +119,13 @@ func (s *serial) Stats() *Stats {
 	return &s.s
 }
 
+func (s *serial) PacketCutoffDuration(n int) time.Duration {
+	if s.CPUHiccup == 0 {
+		return PacketCutoffDuration(s.baudRate, n, DefaultCPUHiccup)
+	}
+	return PacketCutoffDuration(s.baudRate, n, s.CPUHiccup)
+}
+
 //MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 mircos
 func MinDelay(baudRate int64) time.Duration {
 	delay := 1750 * time.Microsecond
@@ -111,4 +143,15 @@ func BytesDelay(baudRate int64, n int) time.Duration {
 	cs := time.Duration(n)
 
 	return (time.Second*11*cs + br - 1) / br
+}
+
+func PacketCutoffDuration(baudRate int64, n int, cpuHiccup time.Duration) time.Duration {
+	return BytesDelay(baudRate, n) + cpuHiccup
+}
+
+func GetPacketCutoffDurationFromSerialContext(s SerialContext, n int) time.Duration {
+	if v2, ok := s.(SerialContextV2); ok {
+		return v2.PacketCutoffDuration(n)
+	}
+	return s.BytesDelay(n) + DefaultCPUHiccup
 }

@@ -105,7 +105,7 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 		return fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 	}
 	if !IsRequestReply(req, rp) {
-		err = errors.New("unexpected packet recieved")
+		err = errors.New("unexpected packet received")
 		c.exitError = err
 		c.cancle()
 		return err
@@ -124,15 +124,22 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 }
 
 //StartTransactionToServer starts a transaction, with a custom slaveID.
-//errChan is required, an error is set is the transaction failed, or
+//errChan is required, an error is set if the transaction failed, or
 //nil for success.
 //
 //StartTransactionToServer is not blocking.
 //
-//For read from server, the PDU is sent as is (after been warped up in RTU)
+//For read from server, the PDU is sent as is (after been warped up in RTU).
 //For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *TCPClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
 	go func() {
-		errChan <- c.DoTransaction2(slaveID, req)
+		errChan <- func() (err error) {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("panic: %v", r)
+				}
+			}()
+			return c.DoTransaction2(slaveID, req)
+		}()
 	}()
 }
