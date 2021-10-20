@@ -55,8 +55,10 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				readDuration := now.Sub(s.lastReadAt)
 				if readDuration > cutoffDuration {
 					debugf("RTUPacketReader read took:%v > %v, reset packet", readDuration, cutoffDuration)
+					s.last = append(s.last[:0], p[read:read+n]...)
+					s.lastReadAt = now
 					atomic.AddInt64(&s.r.Stats().OtherDrops, 1)
-					return read + n, err
+					return read, err
 				}
 			}
 			s.lastReadAt = now
