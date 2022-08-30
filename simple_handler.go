@@ -4,40 +4,39 @@ import (
 	"errors"
 )
 
-//ErrFcNotSupported is another version of EcIllegalFunction, encountering of
-//this error shows the error is locally generated, not a remote ExceptionCode.
+// ErrFcNotSupported is another version of EcIllegalFunction, encountering of
+// this error shows the error is locally generated, not a remote ExceptionCode.
 var ErrFcNotSupported = errors.New("this FunctionCode is not supported")
 
-var _ ProtocolHandler = &SimpleHandler{} //assert implents
+var _ ProtocolHandler = &SimpleHandler{} // assert implents
 
-//SimpleHandler implements ProtocolHandler, any nil function returns ErrFcNotSupported
+// SimpleHandler implements ProtocolHandler, any nil function returns ErrFcNotSupported
 type SimpleHandler struct {
-
-	//ReadDiscreteInputs handles server side FC=2
+	// ReadDiscreteInputs handles server side FC=2
 	ReadDiscreteInputs func(address, quantity uint16) ([]bool, error)
-	//ReadDiscreteInputs handles client side FC=2
+	// ReadDiscreteInputs handles client side FC=2
 	WriteDiscreteInputs func(address uint16, values []bool) error
 
-	//ReadCoils handles client side FC=5&15, server side FC=1
+	// ReadCoils handles client side FC=5&15, server side FC=1
 	ReadCoils func(address, quantity uint16) ([]bool, error)
-	//WriteCoils handles client side FC=1, server side FC=5&15
+	// WriteCoils handles client side FC=1, server side FC=5&15
 	WriteCoils func(address uint16, values []bool) error
 
-	//ReadInputRegisters handles server side FC=4
+	// ReadInputRegisters handles server side FC=4
 	ReadInputRegisters func(address, quantity uint16) ([]uint16, error)
-	//ReadDiscreteInputs handles client side FC=4
+	// ReadDiscreteInputs handles client side FC=4
 	WriteInputRegisters func(address uint16, values []uint16) error
 
-	//ReadHoldingRegisters handles client side FC=6&16, server side FC=3
+	// ReadHoldingRegisters handles client side FC=6&16, server side FC=3
 	ReadHoldingRegisters func(address, quantity uint16) ([]uint16, error)
-	//WriteHoldingRegisters handles client side FC=3, server side FC=6&16
+	// WriteHoldingRegisters handles client side FC=3, server side FC=6&16
 	WriteHoldingRegisters func(address uint16, values []uint16) error
 
-	//OnErrorImp handles OnError
+	// OnErrorImp handles OnError
 	OnErrorImp func(req PDU, errRep PDU)
 }
 
-//OnRead is called by a Server, set Read... to catch the calls.
+// OnRead is called by a Server, set Read... to catch the calls.
 func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 	fc := req.GetFunctionCode()
 	address := req.GetAddress()
@@ -87,7 +86,7 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 	return nil, ErrFcNotSupported
 }
 
-//OnWrite is called by a Server, set Write... to catch the calls.
+// OnWrite is called by a Server, set Write... to catch the calls.
 func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
 	fc := req.GetFunctionCode()
 	address := req.GetAddress()
@@ -136,7 +135,7 @@ func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
 	return ErrFcNotSupported
 }
 
-//OnError is called by a Server, set OnErrorImp to catch the calls
+// OnError is called by a Server, set OnErrorImp to catch the calls
 func (h *SimpleHandler) OnError(req PDU, errRep PDU) {
 	if h.OnErrorImp == nil {
 		return

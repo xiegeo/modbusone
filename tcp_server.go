@@ -6,8 +6,10 @@ import (
 	"net"
 )
 
-const TCPHeaderLength = 6
-const MBAPHeaderLength = TCPHeaderLength + 1
+const (
+	TCPHeaderLength  = 6
+	MBAPHeaderLength = TCPHeaderLength + 1
+)
 
 // TCPServer implements Server/Slave side logic for Modbus over TCP to
 // be used by a ProtocolHandler
@@ -44,7 +46,7 @@ func readTCP(r io.Reader, bs []byte) (n int, err error) {
 
 // writeTCP writes a PDU packet on TCP reusing the headers and buffer space in bs
 func writeTCP(w io.Writer, bs []byte, pdu PDU) (int, error) {
-	l := len(pdu) + 1 //pdu + byte of slaveID
+	l := len(pdu) + 1 // pdu + byte of slaveID
 	bs[4] = byte(l / 256)
 	bs[5] = byte(l)
 	copy(bs[MBAPHeaderLength:], pdu)

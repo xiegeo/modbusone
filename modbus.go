@@ -29,12 +29,11 @@ type ProtocalHandler = ProtocolHandler
 // ProtocolHandler handles PDUs based on if it is a write or read from the local
 // perspective.
 type ProtocolHandler interface {
-
-	//OnWrite is called on the server for a write request,
-	//or on the client for read reply.
-	//For write to server on server side, data is part of req.
-	//For read from server on client side, req is the req from client, and
-	//data is part of reply.
+	// OnWrite is called on the server for a write request,
+	// or on the client for read reply.
+	// For write to server on server side, data is part of req.
+	// For read from server on client side, req is the req from client, and
+	// data is part of reply.
 	OnWrite(req PDU, data []byte) error
 
 	//OnRead is called on the server for a read request,
@@ -46,8 +45,8 @@ type ProtocolHandler interface {
 	//to server.
 	OnRead(req PDU) (data []byte, err error)
 
-	//OnError is called on the client when it receive a well formed
-	//error from server
+	// OnError is called on the client when it receive a well formed
+	// error from server
 	OnError(req PDU, errRep PDU)
 }
 
@@ -64,9 +63,9 @@ const (
 	FcWriteSingleRegister    FunctionCode = 6
 	FcWriteMultipleCoils     FunctionCode = 15
 	FcWriteMultipleRegisters FunctionCode = 16
-	//FcMaskWriteRegister          FunctionCode = 22
-	//FcReadWriteMultipleRegisters FunctionCode = 23
-	//FcReadFIFOQueue              FunctionCode = 24 //not supported for now
+	// FcMaskWriteRegister          FunctionCode = 22
+	// FcReadWriteMultipleRegisters FunctionCode = 23
+	// FcReadFIFOQueue              FunctionCode = 24 //not supported for now
 )
 
 // Valid test if FunctionCode is a supported function, and not an error response.
@@ -85,15 +84,15 @@ func (f FunctionCode) MaxPerPacket() uint16 {
 	case FcReadCoils, FcReadDiscreteInputs:
 		return 2000
 	case FcReadHoldingRegisters, FcReadInputRegisters:
-		return 125 //0x007D
+		return 125 // 0x007D
 	case FcWriteSingleCoil, FcWriteSingleRegister:
 		return 1
 	case FcWriteMultipleCoils:
-		return 0x07B0 //1968
+		return 0x07B0 // 1968
 	case FcWriteMultipleRegisters:
 		return 0x007B
 	}
-	return 0 //unsupported functions
+	return 0 // unsupported functions
 }
 
 // MaxPerPacketSized returns the max number of values a FunctionCode can carry,
@@ -113,7 +112,7 @@ func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 			return 8
 		}
 		if s == MaxPDUSize {
-			//one byte is not used even at max
+			// one byte is not used even at max
 			s--
 		}
 		q := (s - 2) * 8
@@ -140,7 +139,7 @@ func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 		}
 		return (s - 6) / 2
 	}
-	return 0 //unsupported functions
+	return 0 // unsupported functions
 }
 
 // MakeRequestHeader makes a particular PDU without any data, to be used for
@@ -230,9 +229,9 @@ type ExceptionCode byte
 
 // Defined exception codes, 5 to 11 are not used
 const (
-	//EcOK is invented for no error
+	// EcOK is invented for no error
 	EcOK ExceptionCode = 0
-	//EcInternal is invented for error reading ExceptionCode
+	// EcInternal is invented for error reading ExceptionCode
 	EcInternal                           ExceptionCode = 255
 	EcIllegalFunction                    ExceptionCode = 1
 	EcIllegalDataAddress                 ExceptionCode = 2
@@ -355,13 +354,13 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		return nil, EcIllegalDataAddress
 	}
 	if f.IsUint16() {
-		//16 bits registers
+		// 16 bits registers
 		if lb != l*2 {
 			debugf("%v registers does not fit in %v bytes", l, lb)
 			return nil, EcIllegalDataValue
 		}
 	} else {
-		//bools
+		// bools
 		if lb != (l+7)/8 {
 			debugf("%v bools does not fit in %v bytes", l, lb)
 			return nil, EcIllegalDataValue
@@ -372,7 +371,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 
 // GetReplyValues returns the values in a read reply
 func (p PDU) GetReplyValues() ([]byte, error) {
-	l := len(p) - 2 //bytes of values
+	l := len(p) - 2 // bytes of values
 	if l < 1 || l != int(p[1]) {
 		return nil, fmt.Errorf("length mismatch with bytes")
 	}
@@ -401,7 +400,7 @@ func (p PDU) MakeWriteRequest(data []byte) PDU {
 // MakeWriteReply assumes the request is a successful write, and make the associated response
 func (p PDU) MakeWriteReply() PDU {
 	if len(p) > 5 {
-		return p[:5] //works for 5,6,15,16
+		return p[:5] // works for 5,6,15,16
 	}
 	return p
 }

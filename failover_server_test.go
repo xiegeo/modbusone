@@ -13,7 +13,7 @@ import (
 )
 
 type counter struct {
-	reads  int64 //first for alignment
+	reads  int64 // first for alignment
 	writes int64
 	*Stats
 }
@@ -32,6 +32,7 @@ func (c *counter) same(to *counter) bool {
 	return atomic.LoadInt64(&c.reads) == atomic.LoadInt64(&to.reads) &&
 		atomic.LoadInt64(&c.writes) == atomic.LoadInt64(&to.writes)
 }
+
 func (c *counter) sameInverted(to *counter) bool {
 	return atomic.LoadInt64(&c.reads) == atomic.LoadInt64(&to.writes) &&
 		atomic.LoadInt64(&c.writes) == atomic.LoadInt64(&to.reads)
@@ -68,25 +69,25 @@ func setDelays(f *FailoverSerialConn) {
 }
 
 func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
-	//pipes
-	ra, wa := io.Pipe() //server a
-	rb, wb := io.Pipe() //server b
-	rc, wc := io.Pipe() //client
+	// pipes
+	ra, wa := io.Pipe() // server a
+	rb, wb := io.Pipe() // server b
+	rc, wc := io.Pipe() // client
 
-	//everyone writes to everyone else
-	wfa := io.MultiWriter(wb, wc) //write from a, etc...
+	// everyone writes to everyone else
+	wfa := io.MultiWriter(wb, wc) // write from a, etc...
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial("sa", ra, wfa, ra), false, false) //server a connection
-	sb := NewFailoverConn(newMockSerial("sb", rb, wfb, rb), true, false)  //server b connection
-	cc := newMockSerial("cc", rc, wfc, rc)                                //client connection
+	sa := NewFailoverConn(newMockSerial("sa", ra, wfa, ra), false, false) // server a connection
+	sb := NewFailoverConn(newMockSerial("sb", rb, wfb, rb), true, false)  // server b connection
+	cc := newMockSerial("cc", rc, wfc, rc)                                // client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
 	client := NewRTUClient(cc, slaveID)
 
-	//faster timeouts during testing
+	// faster timeouts during testing
 	client.SetServerProcessingTime(serverProcessingTime)
 	setDelays(sa)
 	setDelays(sb)
@@ -149,7 +150,7 @@ func TestFailoverServer(t *testing.T) {
 			t.Fatal("cold start, not expecting any active servers")
 		}
 		for i := 0; i < 3; /*ServerMissesMax*/ i++ {
-			//activates server
+			// activates server
 			DoTransactions(client, id, reqs)
 		}
 		time.Sleep(serverProcessingTime * 2)

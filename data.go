@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//DataToBools translates the data part of PDU to []bool dependent on FunctionCode.
+// DataToBools translates the data part of PDU to []bool dependent on FunctionCode.
 func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 	if fc == FcWriteSingleCoil {
 		if len(data) != 2 {
@@ -40,7 +40,7 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 	return r[:count], nil
 }
 
-//BoolsToData translates []bool to the data part of PDU dependent on FunctionCode.
+// BoolsToData translates []bool to the data part of PDU dependent on FunctionCode.
 func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 	if fc == FcWriteSingleCoil {
 		if len(values) != 1 {
@@ -79,7 +79,7 @@ func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 	return data, nil
 }
 
-//DataToRegisters translates the data part of PDU to []uint16.
+// DataToRegisters translates the data part of PDU to []uint16.
 func DataToRegisters(data []byte) ([]uint16, error) {
 	if len(data) < 2 || len(data)%2 != 0 {
 		debugf("unexpected odd number of bytes %v", len(data))
@@ -93,7 +93,7 @@ func DataToRegisters(data []byte) ([]uint16, error) {
 	return values, nil
 }
 
-//RegistersToData translates []uint16 to the data part of PDU.
+// RegistersToData translates []uint16 to the data part of PDU.
 func RegistersToData(values []uint16) ([]byte, error) {
 	data := make([]byte, 2*len(values))
 	for i, v := range values {

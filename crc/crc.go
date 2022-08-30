@@ -54,7 +54,7 @@ type crc struct {
 	low  byte
 }
 
-//New returns a new Hash computing the Modbus CRC checksum.
+// New returns a new Hash computing the Modbus CRC checksum.
 func New() Hash {
 	var c crc
 	c.Reset()
@@ -87,7 +87,7 @@ func (c *crc) Sum16() uint16 {
 	return uint16(c.low)<<8 | uint16(c.high)
 }
 
-//Hash is a subset of hash.Hash
+// Hash is a subset of hash.Hash
 type Hash interface {
 	// Write (via the embedded io.Writer interface) adds more data to the running hash.
 	// It never returns an error.
@@ -101,11 +101,11 @@ type Hash interface {
 	Reset()
 
 	// Size returns the number of bytes Sum will return.
-	//Size() int
+	// Size() int
 
 	// BlockSize returns the hash's underlying block size.
 	// The Write method must be able to accept any amount
 	// of data, but it may operate more efficiently if all writes
 	// are a multiple of the block size.
-	//BlockSize() int
+	// BlockSize() int
 }

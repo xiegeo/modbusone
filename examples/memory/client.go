@@ -13,7 +13,7 @@ import (
 )
 
 func runClient(c *modbusone.RTUClient) {
-	//make these messages stand out with color
+	// make these messages stand out with color
 	println := color.New(color.FgYellow).PrintlnFunc()
 	println(`Send requests by function code, address, and quantity.` +
 		` such as "2 0 12" (base 10)`)
@@ -54,7 +54,7 @@ func runClient(c *modbusone.RTUClient) {
 }
 
 func parseRequest(ts []string) (fc modbusone.FunctionCode, address, quantity uint16, err error) {
-	quantity = 1 //default value
+	quantity = 1 // default value
 	var n uint64
 
 	if len(ts) == 0 {

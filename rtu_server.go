@@ -12,15 +12,15 @@ import (
 	"time"
 )
 
-//RTUServer implements Server/Slave side logic for RTU over a SerialContext to
-//be used by a ProtocolHandler
+// RTUServer implements Server/Slave side logic for RTU over a SerialContext to
+// be used by a ProtocolHandler
 type RTUServer struct {
 	com          SerialContext
 	packetReader PacketReader
 	SlaveID      byte
 }
 
-//NewRTUServer creates a RTU server on SerialContext listening on slaveID
+// NewRTUServer creates a RTU server on SerialContext listening on slaveID
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	pr, ok := com.(PacketReader)
 	if !ok {
@@ -34,8 +34,8 @@ func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	return &r
 }
 
-//Serve runs the server and only returns after unrecoverable error, such as
-//SerialContext is closed.
+// Serve runs the server and only returns after unrecoverable error, such as
+// SerialContext is closed.
 func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	defer s.Close()
 
@@ -50,7 +50,7 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 
 	var p PDU
 
-	var ioErr error //make continue do io error checking
+	var ioErr error // make continue do io error checking
 	wp := func(pdu PDU, slaveId byte) {
 		if slaveId == 0 {
 			return
@@ -125,13 +125,13 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	return ioErr
 }
 
-//Close closes the server and closes the connect
+// Close closes the server and closes the connect
 func (s *RTUServer) Close() error {
 	return s.com.Close()
 }
 
-//Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
-//See also flag.Uint64 and strconv.ParseUint
+// Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
+// See also flag.Uint64 and strconv.ParseUint
 func Uint64ToSlaveID(n uint64) (byte, error) {
 	if n > 247 {
 		return 0, errors.New("slaveID must be less than 248")
@@ -139,14 +139,14 @@ func Uint64ToSlaveID(n uint64) (byte, error) {
 	return byte(n), nil
 }
 
-//DebugOut sets where to print debug messages.
+// DebugOut sets where to print debug messages.
 //
-//Deprecated: please use SetDebugOut instead.
+// Deprecated: please use SetDebugOut instead.
 var DebugOut io.Writer
 var debugLock sync.Mutex
 
-//SetDebugOut to print debug messages, set to nil to turn off debug output.
-//TODO refactor to use pkg/sync/atomic/#Value once DebugOut is removed
+// SetDebugOut to print debug messages, set to nil to turn off debug output.
+// TODO refactor to use pkg/sync/atomic/#Value once DebugOut is removed
 func SetDebugOut(w io.Writer) {
 	debugLock.Lock()
 	defer debugLock.Unlock()

@@ -29,9 +29,10 @@ func newMockSerial(name string, r io.Reader, w io.Writer, c ...io.Closer) *mockS
 	br := bufio.NewReaderSize(r, 256)
 	return &mockSerial{Reader: br, Writer: w, closers: c, name: name}
 }
+
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
-	//debugf("%v write %x", s.name, data)
+	// debugf("%v write %x", s.name, data)
 	n, err := s.Writer.Write(data)
 	return n, err
 }
@@ -42,7 +43,7 @@ func (s *mockSerial) Read(p []byte) (int, error) {
 	s.readLock.Unlock()
 	if err == nil {
 		go func() {
-			//fill reader buffer
+			// fill reader buffer
 			s.readLock.Lock()
 			s.Reader.Peek(1)
 			s.readLock.Unlock()
@@ -57,22 +58,23 @@ func (s *mockSerial) Close() error {
 	}
 	return nil
 }
+
 func (s *mockSerial) MinDelay() time.Duration {
-	return time.Second / 1000000 //this is needed for multi-client test
+	return time.Second / 1000000 // this is needed for multi-client test
 }
 func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 func (s *mockSerial) Stats() *Stats                  { return &s.s }
 
-//TestHandler runs through each of simplymodbus.ca's samples, conforms both
-//end-to-end behavior and wire format
+// TestHandler runs through each of simplymodbus.ca's samples, conforms both
+// end-to-end behavior and wire format
 func TestHandler(t *testing.T) {
-	//DebugOut = os.Stdout
+	// DebugOut = os.Stdout
 	slaveID := byte(0x11)
-	r1, w1 := io.Pipe() //pipe from client to server
-	r2, w2 := io.Pipe() //pipe from server to client
+	r1, w1 := io.Pipe() // pipe from client to server
+	r2, w2 := io.Pipe() // pipe from server to client
 
-	cc := newMockSerial("c", r2, w1, w1) //client connection
-	sc := newMockSerial("s", r1, w2, w2) //server connection
+	cc := newMockSerial("c", r2, w1, w1) // client connection
+	sc := newMockSerial("s", r1, w2, w2) // server connection
 
 	client := NewRTUClient(cc, slaveID)
 	defer client.Close()
@@ -108,7 +110,7 @@ func TestHandler(t *testing.T) {
 			t.Fatal("response is not as expected")
 		}
 
-		//just test GetPDUSizeFromHeader here too
+		// just test GetPDUSizeFromHeader here too
 		n := GetRTUSizeFromHeader(req, false)
 		if n != len(req) {
 			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for req %x", n, len(req), req)
@@ -118,7 +120,7 @@ func TestHandler(t *testing.T) {
 			t.Errorf("GetRTUSizeFromHeader got %v, expected %v for res %x", n, len(res), req)
 		}
 
-		//make sure LastWritten does not pollute other tests
+		// make sure LastWritten does not pollute other tests
 		cc.LastWritten = nil
 		sc.LastWritten = nil
 	}
@@ -136,7 +138,8 @@ func TestHandler(t *testing.T) {
 			true, true, false, true, false, true, true, false,
 			false, true, false, false, true, true, false, true,
 			false, true, true, true, false, false, false, false,
-			true, true, false, true, true}
+			true, true, false, true, true,
+		}
 		sh.ReadCoils = func(address, quantity uint16) ([]bool, error) {
 			return vs, nil
 		}
@@ -162,7 +165,8 @@ func TestHandler(t *testing.T) {
 		vs := []bool{
 			false, false, true, true, false, true, false, true,
 			true, true, false, true, true, false, true, true,
-			true, false, true, false, true, true}
+			true, false, true, false, true, true,
+		}
 		sh.ReadDiscreteInputs = func(address, quantity uint16) ([]bool, error) {
 			return vs, nil
 		}
@@ -279,7 +283,8 @@ func TestHandler(t *testing.T) {
 		response := RTU([]byte{0x11, 0x0F, 0x00, 0x13, 0x00, 0x0A, 0x26, 0x99})
 		vs := []bool{
 			true, false, true, true, false, false, true, true,
-			true, false}
+			true, false,
+		}
 		sh.WriteCoils = func(address uint16, values []bool) error {
 			for i, b := range values {
 				if vs[i] != b {

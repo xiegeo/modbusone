@@ -13,20 +13,22 @@ import (
 
 var _ = time.Second
 
-var address = flag.String("l", "", "required device location, such as: /dev/ttyS0 in linux or com1 in windows")
-var baudRate = flag.Int("r", 19200, "baud rate")
-var parity = flag.String("p", "E", "parity: N - None, E - Even, O - Odd")
-var stopBits = flag.Int("s", 1, "stop bits: 1 or 2")
+var (
+	address  = flag.String("l", "", "required device location, such as: /dev/ttyS0 in linux or com1 in windows")
+	baudRate = flag.Int("r", 19200, "baud rate")
+	parity   = flag.String("p", "E", "parity: N - None, E - Even, O - Odd")
+	stopBits = flag.Int("s", 1, "stop bits: 1 or 2")
 
-var isClient = flag.Bool("c", false, "true for client, false (default) for server. The client is interactive.")
-var slaveID = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
-var fillData = flag.String("d", "am3", "data to start with, am3 starts memory "+
-	"with bools as address (mod 3) == 0, and registers as address * 3 (mod uint16)")
+	isClient = flag.Bool("c", false, "true for client, false (default) for server. The client is interactive.")
+	slaveID  = flag.Uint64("id", 1, "the slaveId of the server for serial communication, 0 for multicast only")
+	fillData = flag.String("d", "am3", "data to start with, am3 starts memory "+
+		"with bools as address (mod 3) == 0, and registers as address * 3 (mod uint16)")
 
-var writeSizeLimit = flag.Int("wsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a write to server to send")
-var readSizeLimit = flag.Int("rsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a read from server to request")
+	writeSizeLimit = flag.Int("wsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a write to server to send")
+	readSizeLimit  = flag.Int("rsl", modbusone.MaxRTUSize, "client only, the max size in bytes of a read from server to request")
 
-var verbose = flag.Bool("v", false, "prints debugging information")
+	verbose = flag.Bool("v", false, "prints debugging information")
+)
 
 func main() {
 	flag.Parse()
@@ -143,10 +145,12 @@ func main() {
 
 const size = 0x10000
 
-var discretes [size]bool
-var coils [size]bool
-var inputRegisters [size]uint16
-var holdingRegisters [size]uint16
+var (
+	discretes        [size]bool
+	coils            [size]bool
+	inputRegisters   [size]uint16
+	holdingRegisters [size]uint16
+)
 
 func fillAm3() {
 	for i := range discretes {

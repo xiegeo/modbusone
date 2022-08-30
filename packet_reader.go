@@ -11,27 +11,27 @@ import (
 
 var _ = rand.Int63n
 
-//PacketReader signals that this reader returns full ADU packets
+// PacketReader signals that this reader returns full ADU packets
 type PacketReader interface {
 	io.Reader
 	PacketReaderFace()
 }
 
 type rtuPacketReader struct {
-	r             SerialContext //the underlining reader
+	r             SerialContext // the underlining reader
 	isClient      bool
 	bidirectional bool
 	last          []byte
 	lastReadAt    time.Time
 }
 
-//NewRTUPacketReader create a Reader that attempt to read full packets.
+// NewRTUPacketReader create a Reader that attempt to read full packets.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient}
 }
 
-//NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
-//that comes from either server or client.
+// NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
+// that comes from either server or client.
 func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
 	return &rtuPacketReader{r: r, bidirectional: true}
 }
@@ -69,10 +69,10 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			}
 		}
 		if read < expected {
-			//lets read more
+			// lets read more
 			continue
 		}
-		//lets see if there is more to read
+		// lets see if there is more to read
 		if s.bidirectional {
 			expected = GetRTUBidirectionalSizeFromHeader(p[:read])
 			debugf("RTUPacketReader new expected size %v %x", expected, p[:read])
@@ -98,9 +98,9 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 	return read, nil
 }
 
-//GetPDUSizeFromHeader returns the expected sized of a pdu packet with the given
-//PDU header, if not enough info is in the header, then it returns the shortest possible.
-//isClient is true if a client/master is reading the packet.
+// GetPDUSizeFromHeader returns the expected sized of a pdu packet with the given
+// PDU header, if not enough info is in the header, then it returns the shortest possible.
+// isClient is true if a client/master is reading the packet.
 func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 2 {
 		return 2
@@ -110,18 +110,18 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 		return 2
 	}
 	if isClient == f.IsWriteToServer() {
-		//all packets without data: fc, address, and count
+		// all packets without data: fc, address, and count
 		return 5
 	}
 	if isClient {
-		//all data replies: fc, data bytes, data
+		// all data replies: fc, data bytes, data
 		return 2 + int(header[1])
 	}
 	if f.IsSingle() {
-		//fc, address, one data
+		// fc, address, one data
 		return 5
 	}
-	//fc, address, count, data bytes, data
+	// fc, address, count, data bytes, data
 	if len(header) < 6 {
 		return 6
 	}
@@ -135,9 +135,9 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	return 6 + int(header[5])
 }
 
-//GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given
-//RTU header, if not enough info is in the header, then it returns the shortest possible.
-//isClient is true if a client/master is reading the packet.
+// GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given
+// RTU header, if not enough info is in the header, then it returns the shortest possible.
+// isClient is true if a client/master is reading the packet.
 func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 3 {
 		return 3
@@ -145,15 +145,15 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
 
-//GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader
+// GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader
 //
 // Deprecated: misspelling
 func GetRTUBidirectionSizeFromHeader(header []byte) int {
 	return GetRTUBidirectionalSizeFromHeader(header)
 }
 
-//GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
-//by checking the crc for disambiguation of length.
+// GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
+// by checking the crc for disambiguation of length.
 func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	s := GetRTUSizeFromHeader(header, false)
 	l := GetRTUSizeFromHeader(header, true)

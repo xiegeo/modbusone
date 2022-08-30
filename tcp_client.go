@@ -78,7 +78,7 @@ func (c *TCPClient) DoTransaction(req PDU) error {
 
 // DoTransaction2 is DoTransaction with a settable slaveID.
 func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
-	c.locker.Lock() //only handle one transaction at a time for now
+	c.locker.Lock() // only handle one transaction at a time for now
 	defer c.locker.Unlock()
 	var bs []byte
 	if OverSizeSupport {
@@ -118,7 +118,7 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 		return err
 	}
 	if fc.IsReadToServer() {
-		//read from server, write here
+		// read from server, write here
 		bs, err := rp.GetReplyValues()
 		if err != nil {
 			c.exitError = err

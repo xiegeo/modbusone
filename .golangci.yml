@@ -4,10 +4,6 @@
 linters-settings:
   govet:
     check-shadowing: true
-  golint:
-    min-confidence: 0
-  maligned:
-    suggest-new: true
 
 linters:
   enable-all: true
@@ -15,6 +11,7 @@ linters:
     - errcheck
     - gochecknoglobals
     - gocyclo
+    - gocyclop
     - gocognit
     - lll
     - gomnd
@@ -23,6 +20,21 @@ linters:
     - funlen
     - nestif
     - paralleltest
+    - promlinter # Prometheus not used, also panics on run
+    - varnamelen
+    - nlreturn
+    - exhaustruct
+
+    # offically deprecated
+    - nosnakecase
+    - maligned
+    - exhaustivestruct
+    - deadcode
+    - ifshort
+    - varcheck
+    - interfacer
+    - structcheck
+    - golint
 
 issues:
   exclude:

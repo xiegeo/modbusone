@@ -67,24 +67,24 @@ func Example_serialPort() {
     client := modbusone.NewRTUClient(clientSerialContext, id)
     server := modbusone.NewRTUServer(serverSerialContext, id)
 
-    useClientAndServer(client, server, id) //follow the next function
+    useClientAndServer(client, server, id) // follow the next function
 
-    //Output:
-    //reqs count: 2
-    //reqs count: 3
-    //server ReadHoldingRegisters from 0, quantity 125
-    //client WriteHoldingRegisters from 0, quantity 125
-    //server ReadHoldingRegisters from 125, quantity 75
-    //client WriteHoldingRegisters from 125, quantity 75
-    //client ReadHoldingRegisters from 1000, quantity 100
-    //server WriteHoldingRegisters from 1000, quantity 100
-    //server ReadHoldingRegisters from 0, quantity 125
-    //client WriteHoldingRegisters from 0, quantity 125
-    //server ReadHoldingRegisters from 125, quantity 75
-    //client WriteHoldingRegisters from 125, quantity 75
-    //client ReadHoldingRegisters from 1000, quantity 100
-    //server WriteHoldingRegisters from 1000, quantity 100
-    //serve terminated: io: read/write on closed pipe
+    // Output:
+    // reqs count: 2
+    // reqs count: 3
+    // server ReadHoldingRegisters from 0, quantity 125
+    // client WriteHoldingRegisters from 0, quantity 125
+    // server ReadHoldingRegisters from 125, quantity 75
+    // client WriteHoldingRegisters from 125, quantity 75
+    // client ReadHoldingRegisters from 1000, quantity 100
+    // server WriteHoldingRegisters from 1000, quantity 100
+    // server ReadHoldingRegisters from 0, quantity 125
+    // client WriteHoldingRegisters from 0, quantity 125
+    // server ReadHoldingRegisters from 125, quantity 75
+    // client WriteHoldingRegisters from 125, quantity 75
+    // client ReadHoldingRegisters from 1000, quantity 100
+    // server WriteHoldingRegisters from 1000, quantity 100
+    // serve terminated: io: read/write on closed pipe
 }
 
 func useClientAndServer(client modbusone.Client, server modbusone.ServerCloser, id byte) {
@@ -94,7 +94,7 @@ func useClientAndServer(client modbusone.Client, server modbusone.ServerCloser, 
     // So we use a goroutine to start it and continue setting up our demo.
     go client.Serve(handlerGenerator("client"))
     go func() {
-        //A server is Started to same way as a client
+        // A server is Started to same way as a client
         err := server.Serve(handlerGenerator("server"))
         // Do something with the err here.
         // For a command line app, you probably want to terminate.
@@ -106,7 +106,7 @@ func useClientAndServer(client modbusone.Client, server modbusone.ServerCloser, 
 
     // If you only need to support server side, then you are done.
     // If you need to support client side, then you need to make requests.
-    clientDoTransactions(client, id) //see following function
+    clientDoTransactions(client, id) // see following function
 
     // Clean up
     server.Close()
@@ -120,7 +120,7 @@ func clientDoTransactions(client modbusone.Client, id byte) {
     reqs, err := modbusone.MakePDURequestHeaders(modbusone.FcReadHoldingRegisters,
         startAddress, quantity, nil)
     if err != nil {
-        fmt.Println(err) //if what you asked for is not possible.
+        fmt.Println(err) // if what you asked for is not possible.
     }
     // Larger than allowed requests are split to many packets.
     fmt.Println("reqs count:", len(reqs))
@@ -175,25 +175,25 @@ func Example_tcp() {
     client := modbusone.NewTCPClient(conn, 0)
     server := modbusone.NewTCPServer(listener)
 
-    //shared example code with serial port
+    // shared example code with serial port
     useClientAndServer(client, server, id)
 
-    //Output:
-    //reqs count: 2
-    //reqs count: 3
-    //server ReadHoldingRegisters from 0, quantity 125
-    //client WriteHoldingRegisters from 0, quantity 125
-    //server ReadHoldingRegisters from 125, quantity 75
-    //client WriteHoldingRegisters from 125, quantity 75
-    //client ReadHoldingRegisters from 1000, quantity 100
-    //server WriteHoldingRegisters from 1000, quantity 100
-    //server ReadHoldingRegisters from 0, quantity 125
-    //client WriteHoldingRegisters from 0, quantity 125
-    //server ReadHoldingRegisters from 125, quantity 75
-    //client WriteHoldingRegisters from 125, quantity 75
-    //client ReadHoldingRegisters from 1000, quantity 100
-    //server WriteHoldingRegisters from 1000, quantity 100
-    //serve terminated: accept tcp 127.2.9.1:12345: use of closed network connection
+    // Output:
+    // reqs count: 2
+    // reqs count: 3
+    // server ReadHoldingRegisters from 0, quantity 125
+    // client WriteHoldingRegisters from 0, quantity 125
+    // server ReadHoldingRegisters from 125, quantity 75
+    // client WriteHoldingRegisters from 125, quantity 75
+    // client ReadHoldingRegisters from 1000, quantity 100
+    // server WriteHoldingRegisters from 1000, quantity 100
+    // server ReadHoldingRegisters from 0, quantity 125
+    // client WriteHoldingRegisters from 0, quantity 125
+    // server ReadHoldingRegisters from 125, quantity 75
+    // client WriteHoldingRegisters from 125, quantity 75
+    // client ReadHoldingRegisters from 1000, quantity 100
+    // server WriteHoldingRegisters from 1000, quantity 100
+    // serve terminated: accept tcp 127.2.9.1:12345: use of closed network connection
 }
 
 // end readme example

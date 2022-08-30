@@ -14,25 +14,25 @@ import (
 var serverProcessingTime = time.Second / 5
 
 func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *FailoverRTUClient, *FailoverSerialConn, *counter, *counter, *counter, func()) {
-	//pipes
-	ra, wa := io.Pipe() //client a
-	rb, wb := io.Pipe() //client b
-	rc, wc := io.Pipe() //server
+	// pipes
+	ra, wa := io.Pipe() // client a
+	rb, wb := io.Pipe() // client b
+	rc, wc := io.Pipe() // server
 
-	//everyone writes to everyone else
-	wfa := io.MultiWriter(wb, wc) //write from a, etc...
+	// everyone writes to everyone else
+	wfa := io.MultiWriter(wb, wc) // write from a, etc...
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailoverConn(newMockSerial("ca", ra, wfa, ra), false, true) //client a connection
-	cb := NewFailoverConn(newMockSerial("cb", rb, wfb, rb), true, true)  //client b connection
-	sc := newMockSerial("sc", rc, wfc, rc)                               //server connection
+	ca := NewFailoverConn(newMockSerial("ca", ra, wfa, ra), false, true) // client a connection
+	cb := NewFailoverConn(newMockSerial("cb", rb, wfb, rb), true, true)  // client b connection
+	sc := newMockSerial("sc", rc, wfc, rc)                               // server connection
 
 	clientA := NewFailoverRTUClient(ca, false, slaveID)
 	clientB := NewFailoverRTUClient(cb, true, slaveID)
 	server := NewRTUServer(sc, slaveID)
 
-	//faster timeouts during testing
+	// faster timeouts during testing
 	clientA.SetServerProcessingTime(serverProcessingTime)
 	clientB.SetServerProcessingTime(serverProcessingTime)
 	setDelays(ca)
@@ -62,7 +62,7 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 var testFailoverClientCount = 0
 
 func TestFailoverClient(t *testing.T) {
-	//t.Skip()
+	// t.Skip()
 
 	id := byte(0x77)
 	clientA, clientB, pc, countA, countB, countC, close := connectMockClients(t, id)
@@ -89,7 +89,7 @@ func TestFailoverClient(t *testing.T) {
 	_ = coloredgoroutine.Colors
 	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
 	testFailoverClientCount++
-	//fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
+	// fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
 	defer func() {
 		SetDebugOut(nil)
 	}()
@@ -100,7 +100,7 @@ func TestFailoverClient(t *testing.T) {
 			t.Fatal(err)
 		}
 		for i := 0; i < 3; /*MissesMax*/ i++ {
-			//activates client
+			// activates client
 			go DoTransactions(clientA, id, reqs)
 			DoTransactions(clientB, id, reqs)
 		}

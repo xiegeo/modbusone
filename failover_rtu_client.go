@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-//FailoverRTUClient implements Client/Master side logic for RTU over a SerialContext to
-//be used by a ProtocolHandler with failover function.
+// FailoverRTUClient implements Client/Master side logic for RTU over a SerialContext to
+// be used by a ProtocolHandler with failover function.
 type FailoverRTUClient struct {
 	com                  *FailoverSerialConn
 	packetReader         PacketReader
@@ -18,13 +18,13 @@ type FailoverRTUClient struct {
 	actions              chan rtuAction
 }
 
-//FailoverRTUClient is also a Server
+// FailoverRTUClient is also a Server
 var _ Server = &FailoverRTUClient{}
 
-//NewFailoverRTUClient create a new client with failover function communicating over SerialContext with the
-//give slaveID as default.
+// NewFailoverRTUClient create a new client with failover function communicating over SerialContext with the
+// give slaveID as default.
 //
-//If isFailover is true, it is the secondary.
+// If isFailover is true, it is the secondary.
 func NewFailoverRTUClient(com SerialContext, isFailover bool, slaveID byte) *FailoverRTUClient {
 	pr, ok := com.(*FailoverSerialConn)
 	if !ok {
@@ -43,33 +43,33 @@ func NewFailoverRTUClient(com SerialContext, isFailover bool, slaveID byte) *Fai
 	return &r
 }
 
-//SetServerProcessingTime sets the time to wait for a server response, the total
-//wait time also includes the time needed for data transmission.
+// SetServerProcessingTime sets the time to wait for a server response, the total
+// wait time also includes the time needed for data transmission.
 func (c *FailoverRTUClient) SetServerProcessingTime(t time.Duration) {
 	c.serverProcessingTime = t
 }
 
-//GetTransactionTimeOut returns the total time to wait for a transaction
-//(server response) to time out, given the expected length of RTU packets.
-//This function is also used internally to calculate timeout.
+// GetTransactionTimeOut returns the total time to wait for a transaction
+// (server response) to time out, given the expected length of RTU packets.
+// This function is also used internally to calculate timeout.
 func (c *FailoverRTUClient) GetTransactionTimeOut(reqLen, ansLen int) time.Duration {
 	l := reqLen + ansLen
 	return c.com.BytesDelay(l) + c.serverProcessingTime
 }
 
-//Serve serves FailoverRTUClient side handlers,
+// Serve serves FailoverRTUClient side handlers,
 //
-//A FailoverRTUClient expects a lot of "unexpected" read packets and "lost" writes so it
-//is does not do the error checking that a normal client does, but instead try to guess the best
-//interpretation.
+// A FailoverRTUClient expects a lot of "unexpected" read packets and "lost" writes so it
+// is does not do the error checking that a normal client does, but instead try to guess the best
+// interpretation.
 func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 	debugf("serve routine for %v", c.com.describe())
 	defer c.Close()
 	go func() {
 		debugf("reader routine for %v", c.com.describe())
-		//Reader loop that always ready to received data. This make sure that read
-		//data is always new(ish), to dump data out that is received during an
-		//unexpected time.
+		// Reader loop that always ready to received data. This make sure that read
+		// data is always new(ish), to dump data out that is received during an
+		// unexpected time.
 		for {
 			rb := make([]byte, MaxRTUSize)
 			n, err := c.packetReader.Read(rb)
@@ -111,7 +111,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		defer last.Reset()
 
 		if pdu.GetFunctionCode().IsWriteToServer() {
-			//no-op for us
+			// no-op for us
 			return
 		}
 
@@ -165,7 +165,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 		if act.data[0] == 0 || !active {
 			debugf("FailoverRTUClient skip action:%v\n", act)
 			time.Sleep(c.com.BytesDelay(len(act.data)) + c.serverProcessingTime)
-			act.errChan <- nil //always success
+			act.errChan <- nil // always success
 			continue           // do not wait for read on multicast or when not active
 		}
 
@@ -187,7 +187,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 				case clientError:
 					return react.err
 				case clientRead:
-					//test for read error
+					// test for read error
 					if react.err != nil {
 						return react.err
 					}
@@ -222,7 +222,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 					break READ_LOOP
 				}
 				if afc.IsReadToServer() {
-					//read from server, write here
+					// read from server, write here
 					bs, err := rp.GetReplyValues()
 					if err != nil {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
@@ -233,42 +233,42 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 					if err != nil {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					}
-					act.errChan <- err //success if nil
+					act.errChan <- err // success if nil
 					break READ_LOOP
 				}
-				act.errChan <- nil //success
+				act.errChan <- nil // success
 				break READ_LOOP
 			}
 		}
 	}
 }
 
-//Close closes the client and closes the connect.
+// Close closes the client and closes the connect.
 func (c *FailoverRTUClient) Close() error {
 	return c.com.Close()
 }
 
-//DoTransaction starts a transaction, and returns a channel that returns an error
-//or nil, with the default slaveID.
+// DoTransaction starts a transaction, and returns a channel that returns an error
+// or nil, with the default slaveID.
 //
-//DoTransaction is blocking.
+// DoTransaction is blocking.
 //
-//For read from server, the PDU is sent as is (after been warped up in RTU)
-//For write to server, the data part given will be ignored, and filled in by data from handler.
+// For read from server, the PDU is sent as is (after been warped up in RTU)
+// For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *FailoverRTUClient) DoTransaction(req PDU) error {
 	errChan := make(chan error)
 	c.StartTransactionToServer(c.SlaveID, req, errChan)
 	return <-errChan
 }
 
-//StartTransactionToServer starts a transaction, with a custom slaveID.
-//errChan is required and usable, an error is set is the transaction failed, or
-//nil for success.
+// StartTransactionToServer starts a transaction, with a custom slaveID.
+// errChan is required and usable, an error is set is the transaction failed, or
+// nil for success.
 //
-//StartTransactionToServer is not blocking.
+// StartTransactionToServer is not blocking.
 //
-//For read from server, the PDU is sent as is (after been warped up in RTU)
-//For write to server, the data part given will be ignored, and filled in by data from handler.
+// For read from server, the PDU is sent as is (after been warped up in RTU)
+// For write to server, the data part given will be ignored, and filled in by data from handler.
 func (c *FailoverRTUClient) StartTransactionToServer(slaveID byte, req PDU, errChan chan error) {
 	c.actions <- rtuAction{t: clientStart, data: MakeRTU(slaveID, req), errChan: errChan}
 }
