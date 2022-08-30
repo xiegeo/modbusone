@@ -34,6 +34,23 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
 	}
 }
 
+// serial is a fake serial port
+type serial struct {
+	io.ReadCloser
+	io.WriteCloser
+}
+
+func newInternalSerial() (io.ReadWriteCloser, io.ReadWriteCloser) {
+	r1, w1 := io.Pipe()
+	r2, w2 := io.Pipe()
+	return &serial{ReadCloser: r1, WriteCloser: w2}, &serial{ReadCloser: r2, WriteCloser: w1}
+}
+
+func (s *serial) Close() error {
+	s.ReadCloser.Close()
+	return s.WriteCloser.Close()
+}
+
 func Example_serialPort() {
 	// Server id and baudRate, for Modbus over serial port.
 	id := byte(1)
@@ -102,6 +119,7 @@ func useClientAndServer(client modbusone.Client, server modbusone.ServerCloser, 
 }
 
 func clientDoTransactions(client modbusone.Client, id byte) {
+	// start by building some requests
 	startAddress := uint16(0)
 	quantity := uint16(200)
 	reqs, err := modbusone.MakePDURequestHeaders(modbusone.FcReadHoldingRegisters,
@@ -135,7 +153,7 @@ func clientDoTransactions(client modbusone.Client, id byte) {
 	if err != nil {
 		fmt.Println(err, "on", reqs[n])
 	}
-} //end readme example marker
+}
 
 func Example_tcp() {
 	// TCP address of the host
@@ -144,7 +162,7 @@ func Example_tcp() {
 	// Default server id
 	id := byte(1)
 
-	// Open server tcp listner:
+	// Open server tcp listener:
 	listener, err := net.Listen("tcp", host)
 	if err != nil {
 		fmt.Println(err)
@@ -183,17 +201,4 @@ func Example_tcp() {
 	//serve terminated: accept tcp 127.2.9.1:12345: use of closed network connection
 }
 
-type serial struct {
-	io.ReadCloser
-	io.WriteCloser
-}
-
-func newInternalSerial() (io.ReadWriteCloser, io.ReadWriteCloser) {
-	r1, w1 := io.Pipe()
-	r2, w2 := io.Pipe()
-	return &serial{ReadCloser: r1, WriteCloser: w2}, &serial{ReadCloser: r2, WriteCloser: w1}
-}
-func (s *serial) Close() error {
-	s.ReadCloser.Close()
-	return s.WriteCloser.Close()
-}
+// end readme example marker

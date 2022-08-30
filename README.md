@@ -29,6 +29,23 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
     }
 }
 
+// serial is a fake serial port
+type serial struct {
+    io.ReadCloser
+    io.WriteCloser
+}
+
+func newInternalSerial() (io.ReadWriteCloser, io.ReadWriteCloser) {
+    r1, w1 := io.Pipe()
+    r2, w2 := io.Pipe()
+    return &serial{ReadCloser: r1, WriteCloser: w2}, &serial{ReadCloser: r2, WriteCloser: w1}
+}
+
+func (s *serial) Close() error {
+    s.ReadCloser.Close()
+    return s.WriteCloser.Close()
+}
+
 func Example_serialPort() {
     // Server id and baudRate, for Modbus over serial port.
     id := byte(1)
@@ -50,18 +67,35 @@ func Example_serialPort() {
     client := modbusone.NewRTUClient(clientSerialContext, id)
     server := modbusone.NewRTUServer(serverSerialContext, id)
 
-    // Create Handler to handle client and server actions.
-    handler := handlerGenerator
+    useClientAndServer(client, server, id) //follow the next function
 
+    //Output:
+    //reqs count: 2
+    //reqs count: 3
+    //server ReadHoldingRegisters from 0, quantity 125
+    //client WriteHoldingRegisters from 0, quantity 125
+    //server ReadHoldingRegisters from 125, quantity 75
+    //client WriteHoldingRegisters from 125, quantity 75
+    //client ReadHoldingRegisters from 1000, quantity 100
+    //server WriteHoldingRegisters from 1000, quantity 100
+    //server ReadHoldingRegisters from 0, quantity 125
+    //client WriteHoldingRegisters from 0, quantity 125
+    //server ReadHoldingRegisters from 125, quantity 75
+    //client WriteHoldingRegisters from 125, quantity 75
+    //client ReadHoldingRegisters from 1000, quantity 100
+    //server WriteHoldingRegisters from 1000, quantity 100
+    //serve terminated: io: read/write on closed pipe
+}
+
+func useClientAndServer(client modbusone.Client, server modbusone.ServerCloser, id byte) {
     termChan := make(chan error)
 
-    // Now we are ready to serve!
     // Serve is blocking until the serial connection has io errors or is closed.
     // So we use a goroutine to start it and continue setting up our demo.
-    go client.Serve(handler("client"))
+    go client.Serve(handlerGenerator("client"))
     go func() {
         //A server is Started to same way as a client
-        err := server.Serve(handler("server"))
+        err := server.Serve(handlerGenerator("server"))
         // Do something with the err here.
         // For a command line app, you probably want to terminate.
         // For a service, you probably want to wait until you can open the serial port again.
@@ -72,6 +106,15 @@ func Example_serialPort() {
 
     // If you only need to support server side, then you are done.
     // If you need to support client side, then you need to make requests.
+    clientDoTransactions(client, id) //see following function
+
+    // Clean up
+    server.Close()
+    fmt.Println("serve terminated:", <-termChan)
+}
+
+func clientDoTransactions(client modbusone.Client, id byte) {
+    // start by building some requests
     startAddress := uint16(0)
     quantity := uint16(200)
     reqs, err := modbusone.MakePDURequestHeaders(modbusone.FcReadHoldingRegisters,
@@ -105,11 +148,35 @@ func Example_serialPort() {
     if err != nil {
         fmt.Println(err, "on", reqs[n])
     }
+}
 
-    // Clean up
-    server.Close()
-    err = <-termChan
-    fmt.Println("serve terminated:", err)
+func Example_tcp() {
+    // TCP address of the host
+    host := "127.2.9.1:12345"
+
+    // Default server id
+    id := byte(1)
+
+    // Open server tcp listener:
+    listener, err := net.Listen("tcp", host)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+    // Connect to server:
+    conn, err := net.Dial("tcp", host)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+    // You can create either a client or a server
+    client := modbusone.NewTCPClient(conn, 0)
+    server := modbusone.NewTCPServer(listener)
+
+    //shared example code with serial port
+    useClientAndServer(client, server, id)
 
     //Output:
     //reqs count: 2
@@ -126,8 +193,10 @@ func Example_serialPort() {
     //client WriteHoldingRegisters from 125, quantity 75
     //client ReadHoldingRegisters from 1000, quantity 100
     //server WriteHoldingRegisters from 1000, quantity 100
-    //serve terminated: io: read/write on closed pipe
-} //end readme example
+    //serve terminated: accept tcp 127.2.9.1:12345: use of closed network connection
+}
+
+// end readme example
 ```
 
 </details>

@@ -9,13 +9,13 @@ import (
 const TCPHeaderLength = 6
 const MBAPHeaderLength = TCPHeaderLength + 1
 
-//RTUServer implements Server/Slave side logic for Modbus over TCP to
-//be used by a ProtocolHandler
+// TCPServer implements Server/Slave side logic for Modbus over TCP to
+// be used by a ProtocolHandler
 type TCPServer struct {
 	listener net.Listener
 }
 
-//NewTCPServer runs TCP server
+// NewTCPServer runs TCP server
 func NewTCPServer(listener net.Listener) *TCPServer {
 	s := TCPServer{
 		listener: listener,
@@ -42,7 +42,7 @@ func readTCP(r io.Reader, bs []byte) (n int, err error) {
 	return n + TCPHeaderLength, err
 }
 
-//writeTCP writes a PDU packet on TCP reusing the headers and buffer space in bs
+// writeTCP writes a PDU packet on TCP reusing the headers and buffer space in bs
 func writeTCP(w io.Writer, bs []byte, pdu PDU) (int, error) {
 	l := len(pdu) + 1 //pdu + byte of slaveID
 	bs[4] = byte(l / 256)
@@ -118,7 +118,7 @@ func (s *TCPServer) Serve(handler ProtocolHandler) error {
 	}
 }
 
-//Close closes the server and closes the listener
+// Close closes the server and closes the listener
 func (s *TCPServer) Close() error {
 	return s.listener.Close()
 }
