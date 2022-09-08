@@ -1,6 +1,7 @@
 //go:generate embedmd -w README.md
 //go:generate sed -i -e 's/\t/\ \ \ \ /g' README.md
 
+//nolint:forbidigo
 package modbusone_test
 
 import (

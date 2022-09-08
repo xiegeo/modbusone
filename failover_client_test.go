@@ -65,8 +65,8 @@ func TestFailoverClient(t *testing.T) {
 	// t.Skip()
 
 	id := byte(0x77)
-	clientA, clientB, pc, countA, countB, countC, close := connectMockClients(t, id)
-	defer close()
+	clientA, clientB, pc, countA, countB, countC, closeClients := connectMockClients(t, id)
+	defer closeClients()
 	exCount := &counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()
@@ -106,7 +106,7 @@ func TestFailoverClient(t *testing.T) {
 		}
 		time.Sleep(serverProcessingTime)
 		if !pc.IsActive() {
-			t.Fatal("primaray client should be active")
+			t.Fatal("primary client should be active")
 		}
 	})
 

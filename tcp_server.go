@@ -12,12 +12,12 @@ const (
 )
 
 // TCPServer implements Server/Slave side logic for Modbus over TCP to
-// be used by a ProtocolHandler
+// be used by a ProtocolHandler.
 type TCPServer struct {
 	listener net.Listener
 }
 
-// NewTCPServer runs TCP server
+// NewTCPServer runs TCP server.
 func NewTCPServer(listener net.Listener) *TCPServer {
 	s := TCPServer{
 		listener: listener,
@@ -44,17 +44,17 @@ func readTCP(r io.Reader, bs []byte) (n int, err error) {
 	return n + TCPHeaderLength, err
 }
 
-// writeTCP writes a PDU packet on TCP reusing the headers and buffer space in bs
+// writeTCP writes a PDU packet on TCP reusing the headers and buffer space in bs.
 func writeTCP(w io.Writer, bs []byte, pdu PDU) (int, error) {
-	l := len(pdu) + 1 // pdu + byte of slaveID
+	l := len(pdu) + 1 // PDU + byte of slaveID
 	bs[4] = byte(l / 256)
 	bs[5] = byte(l)
 	copy(bs[MBAPHeaderLength:], pdu)
 	return w.Write(bs[:len(pdu)+MBAPHeaderLength])
 }
 
-// Serve runs the server and only returns after a connetion or data error occurred.
-// The underling connection is awalys closed before this fuction returns.
+// Serve runs the server and only returns after a connection or data error occurred.
+// The underling connection is always closed before this function returns.
 func (s *TCPServer) Serve(handler ProtocolHandler) error {
 	defer s.Close()
 

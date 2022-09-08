@@ -3,7 +3,6 @@ package modbusone_test
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -125,7 +124,7 @@ func TestHandler(t *testing.T) {
 		sc.LastWritten = nil
 	}
 
-	t.Run(fmt.Sprintf("Read Coil Status (FC=01)"), func(t *testing.T) {
+	t.Run("Read Coil Status (FC=01)", func(t *testing.T) {
 		subtest = t
 		header, err := FcReadCoils.MakeRequestHeader(0x0013, 0x0025)
 		if err != nil {
@@ -154,7 +153,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Read Input Status (FC=02)"), func(t *testing.T) {
+	t.Run("Read Input Status (FC=02)", func(t *testing.T) {
 		subtest = t
 		header, err := FcReadDiscreteInputs.MakeRequestHeader(0x00C4, 0x0016)
 		if err != nil {
@@ -181,7 +180,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Read Holding Registers (FC=03)"), func(t *testing.T) {
+	t.Run("Read Holding Registers (FC=03)", func(t *testing.T) {
 		subtest = t
 		header, err := FcReadHoldingRegisters.MakeRequestHeader(0x006B, 0x0003)
 		if err != nil {
@@ -204,7 +203,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Read Input Registers (FC=04)"), func(t *testing.T) {
+	t.Run("Read Input Registers (FC=04)", func(t *testing.T) {
 		subtest = t
 		header, err := FcReadInputRegisters.MakeRequestHeader(0x0008, 0x0001)
 		if err != nil {
@@ -227,7 +226,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Write Single Coil (FC=05)"), func(t *testing.T) {
+	t.Run("Write Single Coil (FC=05)", func(t *testing.T) {
 		subtest = t
 		header, err := FcWriteSingleCoil.MakeRequestHeader(0x00AC, 1)
 		if err != nil {
@@ -250,7 +249,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Write Single Register (FC=06)"), func(t *testing.T) {
+	t.Run("Write Single Register (FC=06)", func(t *testing.T) {
 		subtest = t
 		header, err := FcWriteSingleRegister.MakeRequestHeader(0x0001, 1)
 		if err != nil {
@@ -273,7 +272,7 @@ func TestHandler(t *testing.T) {
 		testTrans(header, request, response)
 	})
 
-	t.Run(fmt.Sprintf("Write Multiple Coils (FC=15)"), func(t *testing.T) {
+	t.Run("Write Multiple Coils (FC=15)", func(t *testing.T) {
 		subtest = t
 		header, err := FcWriteMultipleCoils.MakeRequestHeader(0x0013, 0x000A)
 		if err != nil {
@@ -298,7 +297,7 @@ func TestHandler(t *testing.T) {
 		}
 		testTrans(header, request, response)
 	})
-	t.Run(fmt.Sprintf("Write Multiple Registers (FC=16)"), func(t *testing.T) {
+	t.Run("Write Multiple Registers (FC=16)", func(t *testing.T) {
 		subtest = t
 		header, err := FcWriteMultipleRegisters.MakeRequestHeader(0x0001, 0x0002)
 		if err != nil {

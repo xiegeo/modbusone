@@ -8,10 +8,19 @@ linters-settings:
 linters:
   enable-all: true
   disable:
+    # might be good to have for future refactoring
+    - wrapcheck 
+    - goerr113
+    - gocyclo
+    - cyclop
+    - exhaustive
+    - durationcheck
+    - errname
+
+    # generally disabled linters
+    - nolintlint
     - errcheck
     - gochecknoglobals
-    - gocyclo
-    - gocyclop
     - gocognit
     - lll
     - gomnd
@@ -24,8 +33,12 @@ linters:
     - varnamelen
     - nlreturn
     - exhaustruct
+    - nonamedreturns
+    - testpackage
+    - thelper
+    - ireturn
 
-    # offically deprecated
+    # officially deprecated
     - nosnakecase
     - maligned
     - exhaustivestruct
@@ -37,10 +50,17 @@ linters:
     - golint
 
 issues:
+  exclude-rules:
+    - path: "(.+)_test.go"
+      linters:
+        - maintidx
+        - unused
+
   exclude:
     - "G104: Errors unhandled." # turn off errcheck
-    - "declaration of \"[a-z]\" shadows declaration at .*_test.go" # ignore shadowing a single charcter varibles in tests
+    - "declaration of \"[a-z]\" shadows declaration at .*_test.go" # ignore shadowing a single character variables in tests
     - "receiver name [a-z]0 should be consistent with previous receiver name [a-z]" # when we want to operate on a copy
+    - "ST1016: methods on the same type should have the same receiver name .seen .. \"[a-z]0\", .. \"[a-z]\""
     - "error strings should not be capitalized or end with punctuation or a newline" # doesn't matter
     - "lines are duplicate of `crc.crc.go:" # ignore duplications in crc.go
     - "package should be `crc_test` instead of `crc`" # ignore white listed internal testing

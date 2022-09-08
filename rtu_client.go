@@ -9,7 +9,7 @@ import (
 )
 
 // RTUClient implements Client/Master side logic for RTU over a SerialContext to
-// be used by a ProtocolHandler
+// be used by a ProtocolHandler.
 type RTUClient struct {
 	com                  SerialContext
 	packetReader         PacketReader
@@ -18,19 +18,19 @@ type RTUClient struct {
 	actions              chan rtuAction
 }
 
-// Client interface can both start and serve transactions
+// Client interface can both start and serve transactions.
 type Client interface {
 	ServerCloser
 	RTUTransactionStarter
 	DoTransaction(req PDU) error
 }
 
-// RTUClient is a Client
+// RTUClient is a Client.
 var _ Client = &RTUClient{}
 
-// NewRTUCLient is an miscapitalization of NewRTUClient
+// NewRTUCLient is an miscapitalization of NewRTUClient.
 //
-// Deprecated: miscapitalization
+// Deprecated: miscapitalization.
 func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
 	return NewRTUClient(com, slaveID)
 }
@@ -53,7 +53,7 @@ func NewRTUClient(com SerialContext, slaveID byte) *RTUClient {
 }
 
 // SetServerProcessingTime sets the time to wait for a server response, the total
-// wait time also includes the time needed for data transmission
+// wait time also includes the time needed for data transmission.
 func (c *RTUClient) SetServerProcessingTime(t time.Duration) {
 	c.serverProcessingTime = t
 }
@@ -73,7 +73,7 @@ type rtuAction struct {
 	errChan chan<- error
 }
 
-// ErrServerTimeOut is the time out error for StartTransaction
+// ErrServerTimeOut is the time out error for StartTransaction.
 var ErrServerTimeOut = errors.New("server timed out")
 
 type clientActionType int
@@ -224,7 +224,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 	}
 }
 
-// Close closes the client and closes the connect
+// Close closes the client and closes the connection.
 func (c *RTUClient) Close() error {
 	return c.com.Close()
 }
@@ -261,7 +261,7 @@ type RTUTransactionStarter interface {
 
 // DoTransactions runs the reqs transactions in order.
 // If any error is encountered, it returns early and reports the index number and
-// error message
+// error message.
 func DoTransactions(c RTUTransactionStarter, slaveID byte, reqs []PDU) (int, error) {
 	errChan := make(chan error)
 	for i, r := range reqs {
@@ -274,14 +274,14 @@ func DoTransactions(c RTUTransactionStarter, slaveID byte, reqs []PDU) (int, err
 	return len(reqs), nil
 }
 
-// MakePDURequestHeaders generates the list of PDU request headers by spliting quantity
+// MakePDURequestHeaders generates the list of PDU request headers by splitting quantity
 // into allowed sizes.
 // Returns an error if quantity is out of range.
 func MakePDURequestHeaders(fc FunctionCode, address, quantity uint16, appendTO []PDU) ([]PDU, error) {
 	return MakePDURequestHeadersSized(fc, address, quantity, fc.MaxPerPacket(), appendTO)
 }
 
-// MakePDURequestHeadersSized generates the list of PDU request headers by spliting quantity
+// MakePDURequestHeadersSized generates the list of PDU request headers by splitting quantity
 // into sizes of maxPerPacket or less.
 // Returns an error if quantity is out of range.
 //

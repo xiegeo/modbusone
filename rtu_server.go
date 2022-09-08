@@ -13,14 +13,14 @@ import (
 )
 
 // RTUServer implements Server/Slave side logic for RTU over a SerialContext to
-// be used by a ProtocolHandler
+// be used by a ProtocolHandler.
 type RTUServer struct {
 	com          SerialContext
 	packetReader PacketReader
 	SlaveID      byte
 }
 
-// NewRTUServer creates a RTU server on SerialContext listening on slaveID
+// NewRTUServer creates a RTU server on SerialContext listening on slaveID.
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	pr, ok := com.(PacketReader)
 	if !ok {
@@ -125,13 +125,13 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	return ioErr
 }
 
-// Close closes the server and closes the connect
+// Close closes the server and closes the connect.
 func (s *RTUServer) Close() error {
 	return s.com.Close()
 }
 
 // Uint64ToSlaveID is a helper function for reading configuration data to SlaveID.
-// See also flag.Uint64 and strconv.ParseUint
+// See also flag.Uint64 and strconv.ParseUint.
 func Uint64ToSlaveID(n uint64) (byte, error) {
 	if n > 247 {
 		return 0, errors.New("slaveID must be less than 248")
@@ -146,8 +146,8 @@ var DebugOut io.Writer
 var debugLock sync.Mutex
 
 // SetDebugOut to print debug messages, set to nil to turn off debug output.
-// TODO refactor to use pkg/sync/atomic/#Value once DebugOut is removed
 func SetDebugOut(w io.Writer) {
+	// todo: refactor to use pkg/sync/atomic/#Value once DebugOut is removed.
 	debugLock.Lock()
 	defer debugLock.Unlock()
 	DebugOut = w
@@ -156,7 +156,7 @@ func SetDebugOut(w io.Writer) {
 const monkey = false
 
 func debugf(format string, a ...interface{}) {
-	if monkey && rand.Float32() < 0.5 {
+	if monkey && rand.Float32() < 0.5 { //nolint:gosec
 		runtime.Gosched()
 	}
 	debugLock.Lock()

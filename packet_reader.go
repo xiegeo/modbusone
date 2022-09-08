@@ -11,7 +11,7 @@ import (
 
 var _ = rand.Int63n
 
-// PacketReader signals that this reader returns full ADU packets
+// PacketReader signals that this reader returns full ADU packets.
 type PacketReader interface {
 	io.Reader
 	PacketReaderFace()
@@ -98,7 +98,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 	return read, nil
 }
 
-// GetPDUSizeFromHeader returns the expected sized of a pdu packet with the given
+// GetPDUSizeFromHeader returns the expected sized of a PDU packet with the given
 // PDU header, if not enough info is in the header, then it returns the shortest possible.
 // isClient is true if a client/master is reading the packet.
 func GetPDUSizeFromHeader(header []byte, isClient bool) int {
@@ -135,7 +135,7 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	return 6 + int(header[5])
 }
 
-// GetRTUSizeFromHeader returns the expected sized of a rtu packet with the given
+// GetRTUSizeFromHeader returns the expected sized of a RTU packet with the given
 // RTU header, if not enough info is in the header, then it returns the shortest possible.
 // isClient is true if a client/master is reading the packet.
 func GetRTUSizeFromHeader(header []byte, isClient bool) int {
@@ -145,15 +145,15 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
 
-// GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader
+// GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader.
 //
-// Deprecated: misspelling
+// Deprecated: misspelling.
 func GetRTUBidirectionSizeFromHeader(header []byte) int {
 	return GetRTUBidirectionalSizeFromHeader(header)
 }
 
 // GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
-// by checking the crc for disambiguation of length.
+// by checking the CRC for disambiguation of length.
 func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	s := GetRTUSizeFromHeader(header, false)
 	l := GetRTUSizeFromHeader(header, true)

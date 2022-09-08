@@ -220,25 +220,24 @@ Instead, a callback based API (like http server handler) is used for both server
 ## Implemented
 
 - Serial RTU
+- Modbus over TCP
 - Function Codes 1-6,15,16
 - Server and Client API
 - Server and Client Tester (examples/memory)
 
 ## Development
 
-This project is mostly stable, and I am using it in production.
+This project and API is stable, and I am using it in production.
 
-API stability is best effort. This means:
-
-- Changes should not break users code unless there is a compelling reason.
-
-- Code broken by API changes should not compile, new errors to user code should not be introduced silently. 
-
-- API changes will be documented to speed adoption of new versions.
-
-My primary usage is RTU (over RS-485). Others may or may not be implemented in the future.
+My primary usage is RTU (over RS-485). TCP is also supported. Others may or may not be implemented in the future.
 
 Contribution to new or existing functionally, or just changing a private identifier public are welcome, as well as documentation, test, example code or any other improvements.
+
+Development tools:
+
+- `go generate` runs `embedmd` to copy parts of the examples_test.go to this readme file
+- `golangci-lint run` for improvement hints. Ideally there are no warnings.
+- Use `go test -race -count=5 ./...` pre release.
 
 ## Breaking Changes
 
@@ -255,15 +254,17 @@ Contribution to new or existing functionally, or just changing a private identif
 
 Compatibility with a wide range of serial hardware/drivers. (good)
 
-Compatibility with existing Modbus environments. (good)
+Compatibility with existing Modbus environments, including non-compliance and extensions. (good)
 
 Recover from transmission errors and timeouts, to work continuously unattended. (good)
 
-Better test coverage that also tests error conditions. (todo) 
+Better test coverage that also tests error conditions. (todo)
 
-Fuzz testing. (todo) 
+Fuzz testing. (todo)
 
 ## Failover mode
+
+TLDR: do not use.
 
 Failover has landed in v0.2.0, but it should be considered less stable than the other parts.
 

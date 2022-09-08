@@ -10,7 +10,7 @@ import (
 )
 
 // Server is a common interface for all Clients and Servers that use ProtocolHandlers.
-// Deprecated: added Closer in ServerCloser
+// Deprecated: added Closer in ServerCloser.
 type Server interface {
 	Serve(handler ProtocolHandler) error
 }
@@ -21,9 +21,9 @@ type ServerCloser interface {
 	io.Closer
 }
 
-// ProtocalHandler is a misspelling of ProtocolHandler
+// ProtocalHandler is a misspelling of ProtocolHandler.
 //
-// Deprecated: misspelling
+// Deprecated: misspelling.
 type ProtocalHandler = ProtocolHandler
 
 // ProtocolHandler handles PDUs based on if it is a write or read from the local
@@ -36,13 +36,13 @@ type ProtocolHandler interface {
 	// data is part of reply.
 	OnWrite(req PDU, data []byte) error
 
-	//OnRead is called on the server for a read request,
-	//or on the client before write request.
-	//For read from server on the server side, req is from client and data is
-	//part of reply.
-	//For write to server on the client side, req is from local action
-	//(such as RTUClient.StartTransaction), and data will be added to req to send
-	//to server.
+	// OnRead is called on the server for a read request,
+	// or on the client before write request.
+	// For read from server on the server side, req is from client and data is
+	// part of reply.
+	// For write to server on the client side, req is from local action
+	// (such as RTUClient.StartTransaction), and data will be added to req to send
+	// to server.
 	OnRead(req PDU) (data []byte, err error)
 
 	// OnError is called on the client when it receive a well formed
@@ -50,10 +50,10 @@ type ProtocolHandler interface {
 	OnError(req PDU, errRep PDU)
 }
 
-// FunctionCode Modbus function codes
+// FunctionCode Modbus function codes.
 type FunctionCode byte
 
-// Implemented FunctionCodes
+// Implemented FunctionCodes.
 const (
 	FcReadCoils              FunctionCode = 1
 	FcReadDiscreteInputs     FunctionCode = 2
@@ -65,12 +65,12 @@ const (
 	FcWriteMultipleRegisters FunctionCode = 16
 	// FcMaskWriteRegister          FunctionCode = 22
 	// FcReadWriteMultipleRegisters FunctionCode = 23
-	// FcReadFIFOQueue              FunctionCode = 24 //not supported for now
+	// FcReadFIFOQueue              FunctionCode = 24 // not supported for now.
 )
 
 // Valid test if FunctionCode is a supported function, and not an error response.
 func (f FunctionCode) Valid() bool {
-	return (f > 0 && f < 7) || (f > 14 && f < 17) //|| (f > 21 && f < 24)
+	return (f > 0 && f < 7) || (f > 14 && f < 17) // || (f > 21 && f < 24)
 }
 
 // MaxRange is the largest address in the Modbus protocol.
@@ -144,7 +144,7 @@ func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 
 // MakeRequestHeader makes a particular PDU without any data, to be used for
 // client side StartTransaction.
-// The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount()
+// The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount().
 func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error) {
 	if quantity > f.MaxPerPacket() {
 		return nil, fmt.Errorf("%v can not pack %v at once", f, quantity)
@@ -166,7 +166,7 @@ func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error) {
 	return PDU(header), nil
 }
 
-// IsUint16 returns true if the FunctionCode concerns 16bit values
+// IsUint16 returns true if the FunctionCode concerns 16bit values.
 func (f FunctionCode) IsUint16() bool {
 	switch f {
 	case 3, 4, 6, 16:
@@ -175,7 +175,7 @@ func (f FunctionCode) IsUint16() bool {
 	return false
 }
 
-// IsBool returns true if the FunctionCode concerns boolean values
+// IsBool returns true if the FunctionCode concerns boolean values.
 func (f FunctionCode) IsBool() bool {
 	switch f {
 	case 1, 2, 5, 15:
@@ -184,7 +184,7 @@ func (f FunctionCode) IsBool() bool {
 	return false
 }
 
-// IsSingle returns true if the FunctionCode can transmit only one value
+// IsSingle returns true if the FunctionCode can transmit only one value.
 func (f FunctionCode) IsSingle() bool {
 	switch f {
 	case 5, 6:
@@ -214,7 +214,7 @@ func (f FunctionCode) IsReadToServer() bool {
 }
 
 // SeparateError test if FunctionCode is an error response, and also return the version
-// without error flag set
+// without error flag set.
 func (f FunctionCode) SeparateError() (bool, FunctionCode) {
 	return f > 0x7f, f & 0x7f
 }
@@ -224,14 +224,16 @@ func (f FunctionCode) WithError() FunctionCode {
 	return f + 0x80
 }
 
-// ExceptionCode Modbus exception codes
-type ExceptionCode byte
+// ExceptionCode Modbus exception codes.
+type ExceptionCode byte //nolint:errname
 
-// Defined exception codes, 5 to 11 are not used
+// Defined exception codes, 5 to 11 are not used.
+//
+//nolint:errname
 const (
-	// EcOK is invented for no error
+	// EcOK is invented for no error.
 	EcOK ExceptionCode = 0
-	// EcInternal is invented for error reading ExceptionCode
+	// EcInternal is invented for error reading ExceptionCode.
 	EcInternal                           ExceptionCode = 255
 	EcIllegalFunction                    ExceptionCode = 1
 	EcIllegalDataAddress                 ExceptionCode = 2
@@ -244,7 +246,7 @@ const (
 	EcGatewayTargetDeviceFailedToRespond ExceptionCode = 11
 )
 
-// Error implements error for ExceptionCode
+// Error implements error for ExceptionCode.
 func (e ExceptionCode) Error() string {
 	return fmt.Sprintf("ExceptionCode:0x%02X", byte(e))
 }
@@ -265,10 +267,10 @@ func ToExceptionCode(err error) ExceptionCode {
 	return EcServerDeviceFailure
 }
 
-// PDU is the Modbus Protocol Data Unit
+// PDU is the Modbus Protocol Data Unit.
 type PDU []byte
 
-// ExceptionReplyPacket make a PDU packet to reply to request req with ExceptionCode e
+// ExceptionReplyPacket make a PDU packet to reply to request req with ExceptionCode e.
 func ExceptionReplyPacket(req PDU, e ExceptionCode) PDU {
 	fc := req.GetFunctionCode()
 	return PDU([]byte{byte(fc) | 0x80, byte(e)})
@@ -295,7 +297,7 @@ func (p PDU) ValidateRequest() error {
 	return nil
 }
 
-// GetFunctionCode returns the function code
+// GetFunctionCode returns the function code.
 func (p PDU) GetFunctionCode() FunctionCode {
 	if len(p) == 0 {
 		return FunctionCode(0)
@@ -321,7 +323,7 @@ func (p PDU) GetRequestCount() (uint16, error) {
 	return uint16(p[3])<<8 | uint16(p[4]), nil
 }
 
-// GetRequestValues returns the values in a write request
+// GetRequestValues returns the values in a write request.
 func (p PDU) GetRequestValues() ([]byte, error) {
 	f := p.GetFunctionCode()
 	if f == 0 {
@@ -369,7 +371,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 	return p[6:], nil
 }
 
-// GetReplyValues returns the values in a read reply
+// GetReplyValues returns the values in a read reply.
 func (p PDU) GetReplyValues() ([]byte, error) {
 	l := len(p) - 2 // bytes of values
 	if l < 1 || l != int(p[1]) {
@@ -378,13 +380,13 @@ func (p PDU) GetReplyValues() ([]byte, error) {
 	return p[2:], nil
 }
 
-// MakeReadReply produces the reply PDU based on the request PDU and read data
+// MakeReadReply produces the reply PDU based on the request PDU and read data.
 func (p PDU) MakeReadReply(data []byte) PDU {
 	return PDU(append([]byte{byte(p.GetFunctionCode()), byte(len(data))}, data...))
 }
 
 // MakeWriteRequest produces the request PDU based on the request PDU header and
-// (locally) read data
+// (locally) read data.
 func (p PDU) MakeWriteRequest(data []byte) PDU {
 	fc := p.GetFunctionCode()
 	switch fc {
@@ -397,7 +399,7 @@ func (p PDU) MakeWriteRequest(data []byte) PDU {
 	return nil
 }
 
-// MakeWriteReply assumes the request is a successful write, and make the associated response
+// MakeWriteReply assumes the request is a successful write, and make the associated response.
 func (p PDU) MakeWriteReply() PDU {
 	if len(p) > 5 {
 		return p[:5] // works for 5,6,15,16

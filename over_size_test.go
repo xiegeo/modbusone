@@ -85,7 +85,7 @@ func TestOverSize(t *testing.T) {
 	timeout.Reset(time.Second)
 	select {
 	case b := <-bchan:
-		if "1110000000c8c30f" != fmt.Sprintf("%x", b) {
+		if fmt.Sprintf("%x", b) != "1110000000c8c30f" {
 			t.Fatalf("got unexpected read %x", b)
 		}
 	case <-timeout.C:
@@ -102,7 +102,7 @@ func TestOverSize(t *testing.T) {
 	select {
 	case b := <-bchan:
 		// 0x90 is from 200 * 2 = 0x0190
-		if "1103900000" != fmt.Sprintf("%x", b[:5]) {
+		if fmt.Sprintf("%x", b[:5]) != "1103900000" {
 			t.Fatalf("got unexpected read %x", b)
 		}
 	case <-timeout.C:

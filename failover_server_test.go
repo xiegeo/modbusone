@@ -115,8 +115,8 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *FailoverSeri
 
 func TestFailoverServer(t *testing.T) {
 	id := byte(0x77)
-	client, pc, countA, countB, countC, close := connectToMockServers(t, id)
-	defer close()
+	client, pc, countA, countB, countC, closeServers := connectToMockServers(t, id)
+	defer closeServers()
 	exCount := counter{Stats: &Stats{}}
 	resetCounts := func() {
 		exCount.reset()
@@ -155,7 +155,7 @@ func TestFailoverServer(t *testing.T) {
 		}
 		time.Sleep(serverProcessingTime * 2)
 		if !pc.IsActive() {
-			t.Fatal("primaray servers should be active")
+			t.Fatal("primary servers should be active")
 		}
 	})
 

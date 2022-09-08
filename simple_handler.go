@@ -8,9 +8,9 @@ import (
 // this error shows the error is locally generated, not a remote ExceptionCode.
 var ErrFcNotSupported = errors.New("this FunctionCode is not supported")
 
-var _ ProtocolHandler = &SimpleHandler{} // assert implents
+var _ ProtocolHandler = &SimpleHandler{} // Asserts SimpleHandler implants ProtocolHandler.
 
-// SimpleHandler implements ProtocolHandler, any nil function returns ErrFcNotSupported
+// SimpleHandler implements ProtocolHandler, any nil function returns ErrFcNotSupported.
 type SimpleHandler struct {
 	// ReadDiscreteInputs handles server side FC=2
 	ReadDiscreteInputs func(address, quantity uint16) ([]bool, error)
@@ -135,7 +135,7 @@ func (h *SimpleHandler) OnWrite(req PDU, data []byte) error {
 	return ErrFcNotSupported
 }
 
-// OnError is called by a Server, set OnErrorImp to catch the calls
+// OnError is called by a Server, set OnErrorImp to catch the calls.
 func (h *SimpleHandler) OnError(req PDU, errRep PDU) {
 	if h.OnErrorImp == nil {
 		return

@@ -12,7 +12,7 @@ import (
 // TCPClient implements Client/Master side logic for Modbus over a TCP connection to
 // be used by a ProtocolHandler.
 type TCPClient struct {
-	ctx           context.Context
+	ctx           context.Context //nolint:containedctx // ctx is internally created.
 	cancle        context.CancelFunc
 	conn          io.ReadWriteCloser
 	SlaveID       byte
@@ -22,7 +22,7 @@ type TCPClient struct {
 	locker        sync.Mutex
 }
 
-// TCPClient is also a Server
+// TCPClient is also a Server.
 var _ Server = &TCPClient{}
 
 // NewTCPClient create a new client communicating over a TCP connection with the

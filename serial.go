@@ -7,23 +7,23 @@ import (
 	"time"
 )
 
-// DefaultCPUHiccup is the max amount of time the local host is allowed to freeze before we break packets appeart
+// DefaultCPUHiccup is the max amount of time the local host is allowed to freeze before we break packets appear
 // and throw away old unused partial packet data.
 var DefaultCPUHiccup = time.Second / 10
 
 // SerialContext is an interface implemented by SerialPort, can also be mocked for testing.
 type SerialContext interface {
 	io.ReadWriteCloser
-	// RTUMinDelay returns the minimum required delay between packets for framing
+	// RTUMinDelay returns the minimum required delay between packets for framing.
 	MinDelay() time.Duration
-	// RTUBytesDelay returns the duration it takes to send n bytes
+	// RTUBytesDelay returns the duration it takes to send n bytes.
 	BytesDelay(n int) time.Duration
-	// Stats reporting
+	// Stats reporting.
 	Stats() *Stats
 }
 
-// SerialContextV2 is an supperset interface of SerialContext, to support customizing
-// cpu hiccup time.
+// SerialContextV2 is an superset interface of SerialContext, to support customizing
+// CPU hiccup time.
 type SerialContextV2 interface {
 	SerialContext
 	// PacketCutoffDuration returns the duration to force packet breaks,
@@ -57,7 +57,7 @@ type Stats struct {
 	OtherDrops       int64
 }
 
-// Reset the stats to zero
+// Reset the stats to zero.
 func (s *Stats) Reset() {
 	atomic.StoreInt64(&s.ReadPackets, 0)
 	atomic.StoreInt64(&s.CrcErrors, 0)
@@ -69,7 +69,7 @@ func (s *Stats) Reset() {
 	atomic.StoreInt64(&s.OtherDrops, 0)
 }
 
-// TotalDrops adds up all the errors for the total number of read packets dropped
+// TotalDrops adds up all the errors for the total number of read packets dropped.
 func (s *Stats) TotalDrops() int64 {
 	return atomic.LoadInt64(&s.CrcErrors) + atomic.LoadInt64(&s.RemoteErrors) + atomic.LoadInt64(&s.OtherErrors) +
 		atomic.LoadInt64(&s.LongReadWarnings) + atomic.LoadInt64(&s.FormateWarnings) +
@@ -82,7 +82,7 @@ func (s *Stats) String() string {
 		atomic.LoadInt64(&s.IDDrops), atomic.LoadInt64(&s.OtherDrops))
 }
 
-// NewSerialContext creates a SerialContext from any io.ReadWriteCloser
+// NewSerialContext creates a SerialContext from any io.ReadWriteCloser.
 func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate}
 }
@@ -91,7 +91,7 @@ func NewSerialContextWithOption(conn io.ReadWriteCloser, baudRate int64, option 
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate, Option: option}
 }
 
-// Read reads the serial port
+// Read reads the serial port.
 func (s *serial) Read(b []byte) (int, error) {
 	n, err := s.conn.Read(b)
 	return n, err
@@ -126,7 +126,7 @@ func (s *serial) PacketCutoffDuration(n int) time.Duration {
 	return PacketCutoffDuration(s.baudRate, n, s.CPUHiccup)
 }
 
-// MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 mircos
+// MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 micros.
 func MinDelay(baudRate int64) time.Duration {
 	delay := 1750 * time.Microsecond
 	br := time.Duration(baudRate)
@@ -137,7 +137,7 @@ func MinDelay(baudRate int64) time.Duration {
 	return delay
 }
 
-// BytesDelay returns the time it takes to send n bytes in baudRate
+// BytesDelay returns the time it takes to send n bytes in baudRate.
 func BytesDelay(baudRate int64, n int) time.Duration {
 	br := time.Duration(baudRate)
 	cs := time.Duration(n)

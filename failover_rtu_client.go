@@ -18,7 +18,7 @@ type FailoverRTUClient struct {
 	actions              chan rtuAction
 }
 
-// FailoverRTUClient is also a Server
+// FailoverRTUClient is also a Server.
 var _ Server = &FailoverRTUClient{}
 
 // NewFailoverRTUClient create a new client with failover function communicating over SerialContext with the
