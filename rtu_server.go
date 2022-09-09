@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/rand"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -74,7 +73,7 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 		var err error
 		p, err = r.GetPDU()
 		if err != nil {
-			if err == ErrorCrc {
+			if errors.Is(err, ErrorCrc) {
 				atomic.AddInt64(&s.com.Stats().CrcErrors, 1)
 			} else {
 				atomic.AddInt64(&s.com.Stats().OtherErrors, 1)
@@ -139,35 +138,31 @@ func Uint64ToSlaveID(n uint64) (byte, error) {
 	return byte(n), nil
 }
 
-// DebugOut sets where to print debug messages.
-//
-// Deprecated: please use SetDebugOut instead.
-var DebugOut io.Writer
-var debugLock sync.Mutex
+// debugOutput sets where to print debug messages.
+var debugOutput atomic.Value
 
 // SetDebugOut to print debug messages, set to nil to turn off debug output.
 func SetDebugOut(w io.Writer) {
-	// todo: refactor to use pkg/sync/atomic/#Value once DebugOut is removed.
-	debugLock.Lock()
-	defer debugLock.Unlock()
-	DebugOut = w
+	debugOutput.Store(&w) // nil can not be store to atomic.Value directly, but a pointer to nil can.
 }
 
 const monkey = false
 
 func debugf(format string, a ...interface{}) {
-	if monkey && rand.Float32() < 0.5 { //nolint:gosec
+	if monkey && rand.Float32() < 0.5 { //nolint:gosec // Monkey testing's random doesn't need secure random numbers.
 		runtime.Gosched()
 	}
-	debugLock.Lock()
-	defer debugLock.Unlock()
-	if DebugOut == nil {
+	debugWriterP, _ := debugOutput.Load().(*io.Writer)
+	if debugWriterP == nil || *debugWriterP == nil {
+		// SetDebugOut is never called, or last set to nil
 		return
 	}
-	fmt.Fprintf(DebugOut, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
-	fmt.Fprintf(DebugOut, format, a...)
+	debugWriter := *debugWriterP
+	fmt.Fprintf(debugWriter, "[%s]", time.Now().Format("06-01-02 15:04:05.000000"))
+	fmt.Fprintf(debugWriter, format, a...)
 	lf := len(format)
 	if lf > 0 && format[lf-1] != '\n' {
-		fmt.Fprintln(DebugOut)
+		// make sure each call to debugf ends in new line.
+		fmt.Fprintln(debugWriter)
 	}
 }

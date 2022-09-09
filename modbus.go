@@ -5,26 +5,16 @@
 package modbusone
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
 
-// Server is a common interface for all Clients and Servers that use ProtocolHandlers.
-// Deprecated: added Closer in ServerCloser.
-type Server interface {
-	Serve(handler ProtocolHandler) error
-}
-
 // ServerCloser is the common interface for all Clients and Servers that use ProtocolHandlers.
 type ServerCloser interface {
-	Server
+	Serve(handler ProtocolHandler) error
 	io.Closer
 }
-
-// ProtocalHandler is a misspelling of ProtocolHandler.
-//
-// Deprecated: misspelling.
-type ProtocalHandler = ProtocolHandler
 
 // ProtocolHandler handles PDUs based on if it is a write or read from the local
 // perspective.
@@ -257,11 +247,12 @@ func ToExceptionCode(err error) ExceptionCode {
 	if err == nil {
 		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
 	}
-	e, ok := err.(ExceptionCode)
+	var e ExceptionCode
+	ok := errors.As(err, &e)
 	if ok {
 		return e
 	}
-	if err == ErrFcNotSupported {
+	if errors.Is(err, ErrFcNotSupported) {
 		return EcIllegalFunction
 	}
 	return EcServerDeviceFailure

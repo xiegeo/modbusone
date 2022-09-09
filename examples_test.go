@@ -20,13 +20,13 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
 			fmt.Printf("%v ReadHoldingRegisters from %v, quantity %v\n",
 				name, address, quantity)
 			r := make([]uint16, quantity)
-			// application code that fills in r here
+			// Application code that fills in r here.
 			return r, nil
 		},
 		WriteHoldingRegisters: func(address uint16, values []uint16) error {
 			fmt.Printf("%v WriteHoldingRegisters from %v, quantity %v\n",
 				name, address, len(values))
-			// application code here
+			// Application code here.
 			return nil
 		},
 		OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
@@ -35,7 +35,7 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
 	}
 }
 
-// serial is a fake serial port
+// serial is a fake serial port.
 type serial struct {
 	io.ReadCloser
 	io.WriteCloser

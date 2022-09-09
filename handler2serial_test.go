@@ -65,7 +65,7 @@ func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 func (s *mockSerial) Stats() *Stats                  { return &s.s }
 
 // TestHandler runs through each of simplymodbus.ca's samples, conforms both
-// end-to-end behavior and wire format
+// end-to-end behavior and wire format.
 func TestHandler(t *testing.T) {
 	// DebugOut = os.Stdout
 	slaveID := byte(0x11)

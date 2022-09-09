@@ -1,4 +1,4 @@
-# ModbusOne [![GoDoc](https://godoc.org/github.com/xiegeo/modbusone?status.svg)](https://godoc.org/github.com/xiegeo/modbusone)
+# ModbusOne [![Go Reference](https://pkg.go.dev/badge/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation.svg)](https://pkg.go.dev/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation)
 A Modbus library for Go, with unified client and server APIs.
 One implementation to rule them all.
 <details>
@@ -14,13 +14,13 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
             fmt.Printf("%v ReadHoldingRegisters from %v, quantity %v\n",
                 name, address, quantity)
             r := make([]uint16, quantity)
-            // application code that fills in r here
+            // Application code that fills in r here.
             return r, nil
         },
         WriteHoldingRegisters: func(address uint16, values []uint16) error {
             fmt.Printf("%v WriteHoldingRegisters from %v, quantity %v\n",
                 name, address, len(values))
-            // application code here
+            // Application code here.
             return nil
         },
         OnErrorImp: func(req modbusone.PDU, errRep modbusone.PDU) {
@@ -29,7 +29,7 @@ func handlerGenerator(name string) modbusone.ProtocolHandler {
     }
 }
 
-// serial is a fake serial port
+// serial is a fake serial port.
 type serial struct {
     io.ReadCloser
     io.WriteCloser
@@ -240,6 +240,17 @@ Development tools:
 - Use `go test -race -count=5 ./...` pre release.
 
 ## Breaking Changes
+
+2022-09-09 v1.0.0
+
+V1 released with the following depreciated identifiers removed:
+
+- The `Server` interface is removed, use `ServerCloser` instead.
+- Public global variable `DebugOut` is changed to private. Use `SetDebugOut(w io.Writer)` instead for thread safety.
+- Type alias `type ProtocalHandler = ProtocolHandler` removed.
+- Function redirect from `GetRTUBidirectionSizeFromHeader` to `GetRTUBidirectionalSizeFromHeader` removed.
+- Function redirect from `NewRTUCLient` to `NewRTUClient` removed.
+
 
 2018-09-27 v0.2.0
 

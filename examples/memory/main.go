@@ -71,7 +71,7 @@ func main() {
 	if *fillData == "am3" {
 		fillAm3()
 	}
-	var device modbusone.Server
+	var device modbusone.ServerCloser
 	if *isClient {
 		if *writeSizeLimit > modbusone.MaxRTUSize || *readSizeLimit > modbusone.MaxRTUSize {
 			fmt.Fprintf(os.Stderr, "write/read size limit is too big")

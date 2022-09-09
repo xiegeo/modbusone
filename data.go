@@ -62,16 +62,20 @@ func BoolsToData(values []bool, fc FunctionCode) ([]byte, error) {
 
 	for v := 0; v < count; v++ {
 		if values[v] {
+			// set bit in byte to true
 			byteVal |= 1 << bitNr
 		}
-		if bitNr == 7 {
+		switch {
+		case bitNr == 7:
+			// last bit in byte, set data value and go to the next byte
 			data[byteNr] = byteVal
 			byteVal = 0
 			bitNr = 0
 			byteNr++
-		} else if v+1 == count {
+		case v+1 == count:
+			// last bit, set byte value and exit loop
 			data[byteNr] = byteVal
-		} else {
+		default:
 			bitNr++
 		}
 	}

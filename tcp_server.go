@@ -120,7 +120,7 @@ func (s *TCPServer) Serve(handler ProtocolHandler) error {
 	}
 }
 
-// Close closes the server and closes the listener
+// Close closes the server and closes the listener.
 func (s *TCPServer) Close() error {
 	return s.listener.Close()
 }

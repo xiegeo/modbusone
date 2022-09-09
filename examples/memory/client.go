@@ -7,9 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xiegeo/modbusone"
-
 	"github.com/fatih/color"
+	"github.com/xiegeo/modbusone"
 )
 
 func runClient(c *modbusone.RTUClient) {

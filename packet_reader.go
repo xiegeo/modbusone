@@ -145,13 +145,6 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
 
-// GetRTUBidirectionSizeFromHeader is a misspelling of GetRTUBidirectionalSizeFromHeader.
-//
-// Deprecated: misspelling.
-func GetRTUBidirectionSizeFromHeader(header []byte) int {
-	return GetRTUBidirectionalSizeFromHeader(header)
-}
-
 // GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
 // by checking the CRC for disambiguation of length.
 func GetRTUBidirectionalSizeFromHeader(header []byte) int {

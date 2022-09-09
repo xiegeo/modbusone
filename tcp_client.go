@@ -16,14 +16,14 @@ type TCPClient struct {
 	cancle        context.CancelFunc
 	conn          io.ReadWriteCloser
 	SlaveID       byte
-	_handler      ProtocalHandler // very private, always use getHandler
+	_handler      ProtocolHandler // very private, always use getHandler
 	_handlerReady sync.WaitGroup
 	exitError     error // set this before call to cancel
 	locker        sync.Mutex
 }
 
-// TCPClient is also a Server.
-var _ Server = &TCPClient{}
+// TCPClient is also a ServerCloser.
+var _ ServerCloser = &TCPClient{}
 
 // NewTCPClient create a new client communicating over a TCP connection with the
 // given slaveID as default.
@@ -56,7 +56,7 @@ func (c *TCPClient) getHandler() ProtocolHandler {
 	return c._handler
 }
 
-// Close closes the client and closes the TCP connection
+// Close closes the client and closes the TCP connection.
 func (c *TCPClient) Close() error {
 	if c.exitError == nil {
 		c.exitError = errors.New("closed by user action")

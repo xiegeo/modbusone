@@ -3,6 +3,7 @@ package modbusone
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -18,8 +19,8 @@ type FailoverRTUClient struct {
 	actions              chan rtuAction
 }
 
-// FailoverRTUClient is also a Server.
-var _ Server = &FailoverRTUClient{}
+// FailoverRTUClient is also a ServerCloser.
+var _ ServerCloser = &FailoverRTUClient{}
 
 // NewFailoverRTUClient create a new client with failover function communicating over SerialContext with the
 // give slaveID as default.
@@ -199,7 +200,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
-					if err == ErrorCrc {
+					if errors.Is(err, ErrorCrc) {
 						atomic.AddInt64(&c.com.Stats().CrcErrors, 1)
 					} else {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)

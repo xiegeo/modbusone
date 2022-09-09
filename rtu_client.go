@@ -25,15 +25,8 @@ type Client interface {
 	DoTransaction(req PDU) error
 }
 
-// RTUClient is a Client.
+// Asserts that RTUClient implements Client.
 var _ Client = &RTUClient{}
-
-// NewRTUCLient is an miscapitalization of NewRTUClient.
-//
-// Deprecated: miscapitalization.
-func NewRTUCLient(com SerialContext, slaveID byte) *RTUClient {
-	return NewRTUClient(com, slaveID)
-}
 
 // NewRTUClient create a new client communicating over SerialContext with the
 // given slaveID as default.
@@ -182,7 +175,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
-					if err == ErrorCrc {
+					if errors.Is(err, ErrorCrc) {
 						atomic.AddInt64(&c.com.Stats().CrcErrors, 1)
 					} else {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)

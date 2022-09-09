@@ -55,7 +55,12 @@ issues:
       linters:
         - maintidx
         - unused
-
+        
+    - path: "(.+)_test.go"
+      linters:
+        - govet
+      text: "declaration of \"t\" shadows declaration"
+      
   exclude:
     - "G104: Errors unhandled." # turn off errcheck
     - "declaration of \"[a-z]\" shadows declaration at .*_test.go" # ignore shadowing a single character variables in tests
