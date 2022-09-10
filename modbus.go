@@ -241,15 +241,20 @@ func (e ExceptionCode) Error() string {
 	return fmt.Sprintf("ExceptionCode:0x%02X", byte(e))
 }
 
-// ToExceptionCode turns an error into an ExceptionCode (to send in PDU), best
+// ToExceptionCode turns an error into an ExceptionCode (to send in PDU). Best
 // effort with EcServerDeviceFailure as fail back.
+//
+// - If the error is a ExceptionCode or warped ExceptionCode,
+// the original ExceptionCode is returned.
+// - IF the error is ErrFcNotSupported or warped ErrFcNotSupported,
+// EcIllegalFunction is returned.
+// - For all other cases, EcServerDeviceFailure is returned.
 func ToExceptionCode(err error) ExceptionCode {
 	if err == nil {
 		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
+		return EcServerDeviceFailure
 	}
-	var e ExceptionCode
-	ok := errors.As(err, &e)
-	if ok {
+	if e := ExceptionCode(0); errors.As(err, &e) {
 		return e
 	}
 	if errors.Is(err, ErrFcNotSupported) {

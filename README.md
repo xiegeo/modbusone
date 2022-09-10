@@ -243,9 +243,9 @@ Development tools:
 
 2022-09-09 v1.0.0
 
-V1 released with the following depreciated identifiers removed:
+V1 release has the following depreciated identifiers removed:
 
-- The `Server` interface is removed, use `ServerCloser` instead.
+- The `Server` interface is removed. Use `ServerCloser` instead.
 - Public global variable `DebugOut` is changed to private. Use `SetDebugOut(w io.Writer)` instead for thread safety.
 - Type alias `type ProtocalHandler = ProtocolHandler` removed.
 - Function redirect from `GetRTUBidirectionSizeFromHeader` to `GetRTUBidirectionalSizeFromHeader` removed.
