@@ -73,7 +73,7 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 		var err error
 		p, err = r.GetPDU()
 		if err != nil {
-			if errors.Is(err, ErrorCrc) {
+			if err == ErrorCrc {
 				atomic.AddInt64(&s.com.Stats().CrcErrors, 1)
 			} else {
 				atomic.AddInt64(&s.com.Stats().OtherErrors, 1)

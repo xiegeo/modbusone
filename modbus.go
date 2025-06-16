@@ -5,7 +5,6 @@
 package modbusone
 
 import (
-	"errors"
 	"fmt"
 	"io"
 )
@@ -254,10 +253,14 @@ func ToExceptionCode(err error) ExceptionCode {
 		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
 		return EcServerDeviceFailure
 	}
-	if e := ExceptionCode(0); errors.As(err, &e) {
+	if e, ok := err.(ExceptionCode); ok {
 		return e
 	}
-	if errors.Is(err, ErrFcNotSupported) {
+	// errors.As is not supported in Go 1.10
+	//if e := ExceptionCode(0); errors.As(err, &e) {
+	//	return e
+	//}
+	if err == ErrFcNotSupported {
 		return EcIllegalFunction
 	}
 	return EcServerDeviceFailure

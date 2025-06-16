@@ -3,7 +3,6 @@ package modbusone
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -200,7 +199,7 @@ func (c *FailoverRTUClient) Serve(handler ProtocolHandler) error {
 				}
 				rp, err := react.data.GetPDU()
 				if err != nil {
-					if errors.Is(err, ErrorCrc) {
+					if err == ErrorCrc {
 						atomic.AddInt64(&c.com.Stats().CrcErrors, 1)
 					} else {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
