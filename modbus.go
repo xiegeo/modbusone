@@ -7,6 +7,8 @@ package modbusone
 import (
 	"fmt"
 	"io"
+	"regexp"
+	"strings"
 )
 
 // ServerCloser is the common interface for all Clients and Servers that use ProtocolHandlers.
@@ -222,7 +224,7 @@ type ExceptionCode byte //nolint:errname
 const (
 	// EcOK is invented for no error.
 	EcOK ExceptionCode = 0
-	// EcInternal is invented for error reading ExceptionCode.
+	// EcInternal is invented for error reading ExceptionCode, should be converted to EcServerDeviceFailure when sent.
 	EcInternal                           ExceptionCode = 255
 	EcIllegalFunction                    ExceptionCode = 1
 	EcIllegalDataAddress                 ExceptionCode = 2
@@ -240,6 +242,8 @@ func (e ExceptionCode) Error() string {
 	return fmt.Sprintf("ExceptionCode:0x%02X", byte(e))
 }
 
+var exceptionCodeGetter = regexp.MustCompile(`ExceptionCode:0x([0-9A-Fa-f]+)`).FindStringSubmatch
+
 // ToExceptionCode turns an error into an ExceptionCode (to send in PDU). Best
 // effort with EcServerDeviceFailure as fail back.
 //
@@ -253,16 +257,28 @@ func ToExceptionCode(err error) ExceptionCode {
 		debugf("ToExceptionCode: unexpected covert nil error to ExceptionCode")
 		return EcServerDeviceFailure
 	}
-	if e, ok := err.(ExceptionCode); ok {
-		return e
+
+	if err == ErrFcNotSupported || strings.Contains(err.Error(), "not supported") {
+		return EcIllegalFunction
 	}
+
 	// errors.As is not supported in Go 1.10
 	//if e := ExceptionCode(0); errors.As(err, &e) {
 	//	return e
 	//}
-	if err == ErrFcNotSupported {
-		return EcIllegalFunction
+	// check for wrapped error with string matching, as errors.Is is not supported in Go 1.10
+	if m := exceptionCodeGetter(err.Error()); len(m) == 2 {
+		e := ExceptionCode(0)
+		if c, err2 := fmt.Sscanf(string(m[1]), "%02X", &e); c == 1 && err2 == nil {
+		}else{
+			e = EcInternal
+		}
+		if e == 0 || e > EcGatewayTargetDeviceFailedToRespond {
+			return EcServerDeviceFailure
+		}
+		return e
 	}
+
 	return EcServerDeviceFailure
 }
 
