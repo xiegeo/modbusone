@@ -214,6 +214,8 @@ func (f FunctionCode) WithError() FunctionCode {
 	return f + 0x80
 }
 
+var ErrDoNotRespond = errors.New("do not respond") // a handler can use this to not send a response, just like for SlaveID 0 in RTU.
+
 // ExceptionCode Modbus exception codes.
 type ExceptionCode byte //nolint:errname
 
@@ -223,7 +225,7 @@ type ExceptionCode byte //nolint:errname
 const (
 	// EcOK is invented for no error.
 	EcOK ExceptionCode = 0
-	// EcInternal is invented for error reading ExceptionCode.
+	// EcInternal is invented for error reading ExceptionCode, should be converted to EcServerDeviceFailure when sent.
 	EcInternal                           ExceptionCode = 255
 	EcIllegalFunction                    ExceptionCode = 1
 	EcIllegalDataAddress                 ExceptionCode = 2

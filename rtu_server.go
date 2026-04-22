@@ -58,6 +58,9 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 		_, ioErr = s.com.Write(MakeRTU(slaveId, pdu))
 	}
 	wec := func(err error, slaveId byte) {
+		if errors.Is(err, ErrDoNotRespond) {
+			return
+		}
 		wp(ExceptionReplyPacket(p, ToExceptionCode(err)), slaveId)
 	}
 
