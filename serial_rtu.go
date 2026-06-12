@@ -31,8 +31,11 @@ func MakeRTU(slaveID byte, p PDU) RTU {
 	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }
 
-// GetSlaveID returns the slaveID inside.
+// GetSlaveID returns the slaveID inside, or 255 if the RTU is empty.
 func (r RTU) GetSlaveID() byte {
+	if len(r) == 0 {
+		return 255 // invalid slaveID
+	}
 	return r[0]
 }
 
