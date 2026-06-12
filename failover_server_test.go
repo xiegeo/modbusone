@@ -19,11 +19,11 @@ type counter struct {
 }
 
 func (c *counter) total() int64 {
-	return c.Stats.TotalDrops() + atomic.LoadInt64(&c.reads) + atomic.LoadInt64(&c.writes)
+	return c.TotalDrops() + atomic.LoadInt64(&c.reads) + atomic.LoadInt64(&c.writes)
 }
 
 func (c *counter) reset() {
-	c.Stats.Reset()
+	c.Reset()
 	atomic.StoreInt64(&c.reads, 0)
 	atomic.StoreInt64(&c.writes, 0)
 }

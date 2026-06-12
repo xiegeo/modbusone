@@ -1,0 +1,11 @@
+version = "2"
+
+[linters]
+disable = [
+  "errcheck", 
+]
+
+[linters.exclusions]
+rules = [
+    {path="_test\\.go", linters=["staticcheck","unused"]},
+]
