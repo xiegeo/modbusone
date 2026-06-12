@@ -17,7 +17,7 @@ type ServerCloser interface {
 }
 
 // ProtocolHandler handles PDUs based on if it is a write or read from the local
-// perspective.
+// perspective. See also: RTUProtocolHandler for including the server id
 type ProtocolHandler interface {
 	// OnWrite is called on the server for a write request,
 	// or on the client for read reply.
@@ -38,6 +38,30 @@ type ProtocolHandler interface {
 	// OnError is called on the client when it receive a well formed
 	// error from server
 	OnError(req PDU, errRep PDU)
+}
+
+// RTUProtocolHandler handles RTUs based on if it is a write or read from the local
+// perspective. See also: ProtocolHandler for just PDUs
+type RTUProtocolHandler interface {
+	// OnWrite is called on the server for a write request,
+	// or on the client for read reply.
+	// For write to server on server side, data is part of req.
+	// For read from server on client side, req is the req from client, and
+	// data is part of reply.
+	OnWrite(req RTU, data []byte) error
+
+	// OnRead is called on the server for a read request,
+	// or on the client before write request.
+	// For read from server on the server side, req is from client and data is
+	// part of reply.
+	// For write to server on the client side, req is from local action
+	// (such as RTUClient.StartTransaction), and data will be added to req to send
+	// to server.
+	OnRead(req RTU) (data []byte, err error)
+
+	// OnError is called on the client when it receive a well formed
+	// error from server
+	OnError(req RTU, errRep RTU)
 }
 
 // FunctionCode Modbus function codes.

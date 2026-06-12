@@ -89,8 +89,40 @@ func (a clientActionType) String() string {
 	return fmt.Sprintf("clientActionType %d", a)
 }
 
-// Serve serves RTUClient handlers.
+// Serve serves RTUClient handlers. Only supports a single SlaveID
 func (c *RTUClient) Serve(handler ProtocolHandler) error {
+	return c.ServeRTU(&upgradeHandler{slaveID: c.SlaveID, handler: handler})
+}
+
+type upgradeHandler struct {
+	slaveID byte
+	handler ProtocolHandler
+}
+
+func (h *upgradeHandler) OnRead(rtu RTU) ([]byte, error) {
+	if h.slaveID != rtu.GetSlaveID() { // extra assertion check, should never happen
+		return nil, fmt.Errorf("SlaveID mismatch from RTU got %v want %v", rtu.GetSlaveID(), h.slaveID)
+	}
+	data, err := h.handler.OnRead(rtu.fastGetPDU())
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (h *upgradeHandler) OnWrite(rtu RTU, data []byte) error {
+	if h.slaveID != rtu.GetSlaveID() { // extra assertion check, should never happen
+		return fmt.Errorf("SlaveID mismatch from RTU got %v want %v", rtu.GetSlaveID(), h.slaveID)
+	}
+	return h.handler.OnWrite(rtu.fastGetPDU(), data)
+}
+
+func (h *upgradeHandler) OnError(req RTU, errRep RTU) {
+	h.handler.OnError(req.fastGetPDU(), errRep.fastGetPDU())
+}
+
+// Serve serves RTUClient handlers.
+func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 	defer c.Close()
 	go func() {
 		// Reader loop that always ready to received data. This make sure that read
@@ -125,13 +157,12 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
 		if afc.IsWriteToServer() {
-			data, err := handler.OnRead(ap)
+			data, err := handler.OnRead(act.data)
 			if err != nil {
 				act.errChan <- err
 				continue
 			}
 			act.data = MakeRTU(act.data[0], ap.MakeWriteRequest(data))
-			ap = act.data.fastGetPDU()
 		}
 		time.Sleep(c.com.MinDelay())
 		_, err := c.com.Write(act.data)
@@ -186,7 +217,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
 					atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
-					handler.OnError(ap, rp)
+					handler.OnError(act.data, react.data)
 					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
@@ -203,7 +234,7 @@ func (c *RTUClient) Serve(handler ProtocolHandler) error {
 						act.errChan <- err
 						break READ_LOOP
 					}
-					err = handler.OnWrite(ap, bs)
+					err = handler.OnWrite(act.data, bs)
 					if err != nil {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					}

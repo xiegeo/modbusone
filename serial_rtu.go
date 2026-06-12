@@ -31,6 +31,11 @@ func MakeRTU(slaveID byte, p PDU) RTU {
 	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }
 
+// GetSlaveID returns the slaveID inside.
+func (r RTU) GetSlaveID() byte {
+	return r[0]
+}
+
 // IsMulticast returns true if slaveID is the multicast address 0.
 func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
