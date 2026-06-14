@@ -86,12 +86,12 @@ func main() {
 	h := modbusone.SimpleHandler{
 		ReadDiscreteInputs: func(address, quantity uint16) ([]bool, error) {
 			fmt.Printf("ReadDiscreteInputs from %v, quantity %v\n", address, quantity)
-			return discretes[address : address+quantity], nil
+			return discreteInputs[address : address+quantity], nil
 		},
 		WriteDiscreteInputs: func(address uint16, values []bool) error {
 			fmt.Printf("WriteDiscreteInputs from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
-				discretes[address+uint16(i)] = v
+				discreteInputs[address+uint16(i)] = v
 			}
 			return nil
 		},
@@ -143,18 +143,32 @@ func main() {
 	}
 }
 
-const size = 0x10000
+const size = 0x10000 // 65536 addresses (0x0000 - 0xFFFF)
 
 var (
-	discretes        [size]bool
-	coils            [size]bool
-	inputRegisters   [size]uint16
+	// Discrete Inputs (read-only boolean bits)
+	// Memory: 65536 * 1 byte ≈ 64 KB
+	discreteInputs [size]bool
+
+	// Coils (read/write boolean bits)
+	// Memory: 65536 * 1 byte ≈ 64 KB
+	coils [size]bool
+
+	// Input Registers (read-only 16-bit values)
+	// Memory: 65536 * 2 bytes ≈ 128 KB
+	inputRegisters [size]uint16
+
+	// Holding Registers (read/write 16-bit values)
+	// Memory: 65536 * 2 bytes ≈ 128 KB
 	holdingRegisters [size]uint16
 )
 
+// Total memory footprint (approx):
+// 64 KB + 64 KB + 128 KB + 128 KB ≈ 384 KB
+
 func fillAm3() {
-	for i := range discretes {
-		discretes[i] = i%3 == 0
+	for i := range discreteInputs {
+		discreteInputs[i] = i%3 == 0
 	}
 	for i := range coils {
 		coils[i] = i%3 != 0
