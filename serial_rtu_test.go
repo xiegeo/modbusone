@@ -66,6 +66,77 @@ func TestRTUDelay(t *testing.T) {
 	}
 }
 
+func TestGetSlaveID(t *testing.T) {
+	testCases := []struct {
+		name string
+		rtu  RTU
+		want byte
+	}{
+		{
+			name: "empty RTU returns 255 (invalid)",
+			rtu:  RTU([]byte{}),
+			want: 255,
+		},
+		{
+			name: "slaveID 0x11",
+			rtu:  RTU([]byte{0x11, 0x10, 0x00, 0x01, 0x00, 0x02, 0x12, 0x98}),
+			want: 0x11,
+		},
+		{
+			name: "slaveID 0 (multicast address)",
+			rtu:  RTU([]byte{0x00, 0x10, 0x00, 0x01, 0x00, 0x02, 0x12, 0x98}),
+			want: 0,
+		},
+		{
+			name: "slaveID 1",
+			rtu:  RTU([]byte{0x01, 0x03, 0x00, 0x00, 0x00, 0x01, 0x84, 0x0A}),
+			want: 1,
+		},
+		{
+			name: "slaveID 254 (max non-reserved)",
+			rtu:  RTU([]byte{0xFE, 0x03, 0x00, 0x00}),
+			want: 0xFE,
+		},
+		{
+			name: "slaveID 255 (matches invalid sentinel)",
+			rtu:  RTU([]byte{0xFF, 0x03, 0x00, 0x00}),
+			want: 0xFF,
+		},
+		{
+			name: "single byte RTU returns that byte",
+			rtu:  RTU([]byte{0x42}),
+			want: 0x42,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.rtu.GetSlaveID()
+			if got != tc.want {
+				t.Errorf("GetSlaveID() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestGetSlaveIDMatchesMakeRTU verifies that GetSlaveID returns the same slaveID
+// used to create the RTU with MakeRTU.
+func TestGetSlaveIDMatchesMakeRTU(t *testing.T) {
+	testSlaveIDs := []byte{0, 1, 0x11, 127, 200, 254}
+	pdu, err := FcReadHoldingRegisters.MakeRequestHeader(0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, slaveID := range testSlaveIDs {
+		t.Run(fmt.Sprintf("slaveID %d", slaveID), func(t *testing.T) {
+			rtu := MakeRTU(slaveID, pdu)
+			got := rtu.GetSlaveID()
+			if got != slaveID {
+				t.Errorf("GetSlaveID() = %v, want %v (same as MakeRTU input)", got, slaveID)
+			}
+		})
+	}
+}
+
 func TestMaxPerPacketSized(t *testing.T) {
 	for fc := FunctionCode(1); fc < 0xf0; fc++ {
 		if !fc.Valid() {
