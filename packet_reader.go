@@ -18,11 +18,11 @@ type PacketReader interface {
 }
 
 type rtuPacketReader struct {
-	r             SerialContext // the underlining reader
-	isClient      bool
-	bidirectional bool
-	last          []byte
-	lastReadAt    time.Time
+	r              SerialContext // the underlining reader
+	isClient       bool
+	bidirectional  bool
+	last           []byte
+	lastReadAt     time.Time
 }
 
 // NewRTUPacketReader create a Reader that attempt to read full packets.
@@ -49,6 +49,9 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		} else {
 			// time.Sleep(time.Duration(rand.Int63n(int64(time.Second / 10))))
 			n, err := s.r.Read(p[read:])
+			if n < 0 {  // some users report n = -1 on error
+				n = 0
+			}
 			now := time.Now()
 			if read != 0 {
 				cutoffDuration := GetPacketCutoffDurationFromSerialContext(s.r, n)
@@ -62,7 +65,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				}
 			}
 			s.lastReadAt = now
-			debugf("RTUPacketReader read (%v+%v)/%v %v, expected %v", read, n, len(p), err, expected)
+			debugf("RTUPacketReader read (%v+%v)/%v err:%v, expected %v", read, n, len(p), err, expected)
 			read += n
 			if err != nil || read == len(p) {
 				return read, err
@@ -80,7 +83,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
 			debugf("RTUPacketReader new expected size %v %v %x", expected, s.isClient, p[:read])
 		}
-		if expected > read-1 {
+		if expected > read-1 {  // some devices returns immediately on first byte received, so we let it buffer before calling read again.
 			time.Sleep(s.r.BytesDelay(expected - read))
 		}
 	}
