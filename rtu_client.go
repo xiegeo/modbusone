@@ -269,6 +269,16 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 	return <-errChan
 }
 
+func (c *RTUClient) DoRTUTransaction(rtu RTU) error {
+	errChan := make(chan error)
+	pdu, err := rtu.GetPDU()
+	if err != nil {
+		return err
+	}
+	c.StartTransactionToServer(rtu.GetSlaveID(), pdu, errChan)
+	return <-errChan
+}
+
 // StartTransactionToServer starts a transaction, with a custom slaveID.
 // errChan is required, an error is set is the transaction failed, or
 // nil for success.
