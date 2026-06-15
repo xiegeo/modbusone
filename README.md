@@ -220,6 +220,7 @@ Instead, a callback based API (like http server handler) is used for both server
 ## Implemented
 
 - Serial RTU
+  - Supports 1 client with n servers on the same serial port.
 - Modbus over TCP
 - Function Codes 1-6,15,16
 - Server and Client API
