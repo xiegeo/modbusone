@@ -256,10 +256,7 @@ func (c *RTUClient) Close() error {
 	return c.com.Close()
 }
 
-// DoTransaction starts a transaction, and returns a channel that returns an error
-// or nil, with the default slaveID.
-//
-// DoTransaction is blocking.
+// DoTransaction starts a blocking transaction.
 //
 // For read from server, the PDU is sent as is (after been warped up in RTU)
 // For write to server, the data part given will be ignored, and filled in by data from handler.
@@ -269,7 +266,11 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 	return <-errChan
 }
 
-func (c *RTUClient) DoRTUTransaction(rtu RTU) error {
+// DoRTUTransaction starts a blocking transaction by warping StartTransactionToServer.
+//
+// RTU is currently required to be valid, but is not sent as is for write to servers,
+// where data is to be filled in by the client handler.
+func DoRTUTransaction(c Client, rtu RTU) error {
 	errChan := make(chan error)
 	pdu, err := rtu.GetPDU()
 	if err != nil {
