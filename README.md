@@ -1,4 +1,4 @@
-# ModbusOne [![Go Reference](https://pkg.go.dev/badge/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation.svg)](https://pkg.go.dev/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation)
+# ModbusOne [![Go Reference](https://pkg.go.dev/badge/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation.svg)](https://pkg.go.dev/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation) [![codecov](https://codecov.io/github/xiegeo/modbusone/graph/badge.svg?token=P14LsyFBNh)](https://codecov.io/github/xiegeo/modbusone)
 A Modbus library for Go, with unified client and server APIs.
 One implementation to rule them all.
 <details>
