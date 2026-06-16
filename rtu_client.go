@@ -266,7 +266,7 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 	return <-errChan
 }
 
-// DoRTUTransaction starts a blocking transaction by warping StartTransactionToServer.
+// DoRTUTransaction starts a blocking transaction by wrapping StartTransactionToServer.
 //
 // RTU is currently required to be valid, but is not sent as is for write to servers,
 // where data is to be filled in by the client handler.
