@@ -21,6 +21,13 @@ var OverSizeSupport = false
 // OverSizeMaxRTU overrides MaxRTUSize when OverSizeSupport is true.
 var OverSizeMaxRTU = MaxRTUSize
 
+func GetMaxPDUSize() int {
+	if OverSizeSupport{
+		return OverSizeMaxRTU - 3
+	}
+	return MaxPDUSize
+}
+
 const smallestRTUSize = 4
 
 // RTU is the Modbus RTU Application Data Unit.
