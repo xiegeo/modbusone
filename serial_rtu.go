@@ -13,17 +13,18 @@ const MaxRTUSize = 256
 const MaxPDUSize = 253
 
 // OverSizeSupport ignores max packet size and encoded number of bytes to support
-// over sided implementations encountered in the wild. This setting only applies
+// over sized implementations encountered in the wild. This setting only applies
 // to the server end, since client is always reserved in what it requests.
 // Also change OverSizeMaxRTU properly.
 var OverSizeSupport = false
 
 // OverSizeMaxRTU overrides MaxRTUSize when OverSizeSupport is true.
+// It should not be smaller than MaxRTUSize.
 var OverSizeMaxRTU = MaxRTUSize
 
 func GetMaxPDUSize() int {
 	if OverSizeSupport{
-		return OverSizeMaxRTU - 3
+		return max(MaxPDUSize, OverSizeMaxRTU - 3)
 	}
 	return MaxPDUSize
 }
