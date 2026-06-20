@@ -27,7 +27,7 @@ type rtuPacketReader struct {
 }
 
 // NewRTUPacketReader create a Reader that attempt to read full packets.
-// Please use NewRTUPacketReader2 then serving on a multi-server connection.
+// Please use NewRTUPacketReader2 when serving on a multi-server connection.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient}
 }
@@ -156,6 +156,9 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 3 {
 		return 3
 	}
+	if header[0] == 0 {
+		return GetPDUSizeFromHeader(header[1:], true) + 3
+	}
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
 
@@ -169,11 +172,13 @@ func GetRTUSizeFromHeader2(header []byte, isClient bool, serverId byte) int {
 		return GetPDUSizeFromHeader(header[1:], isClient) + 3
 	}
 
-	return GetRTUBidirectionalSizeFromHeader(header)
+	return GetRTUBidirectionalSizeFromHeader(header) // fail back to any direction if it's not our packet
 }
 
 // GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
 // by checking the CRC for disambiguation of length.
+//
+// There is currently a slight possibly that a long pack happens to crc correctly to a shorter packet
 func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	s := GetRTUSizeFromHeader(header, false)
 	l := GetRTUSizeFromHeader(header, true)
