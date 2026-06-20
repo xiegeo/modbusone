@@ -101,25 +101,25 @@ type MultiIDHandler map[byte]ProtocolHandler
 var _ RTUProtocolHandler = &MultiIDHandler{}
 
 func (m MultiIDHandler) OnRead(rtu RTUHeader) ([]byte, error) {
-	h, ok := m[rtu.ServerID]
+	h, ok := m[rtu.SlaveID]
 	if !ok {
-		return nil, fmt.Errorf("ServerID %v is not defined for MultiIDHandler", rtu.ServerID)
+		return nil, fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", rtu.SlaveID)
 	}
 	return h.OnRead(rtu.PDU)
 }
 
 func (m MultiIDHandler) OnWrite(rtu RTUHeader, data []byte) error {
-	h, ok := m[rtu.ServerID]
+	h, ok := m[rtu.SlaveID]
 	if !ok {
-		return fmt.Errorf("ServerID %v is not defined for MultiIDHandler", rtu.ServerID)
+		return fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", rtu.SlaveID)
 	}
 	return h.OnWrite(rtu.PDU, data)
 }
 
 func (m MultiIDHandler) OnError(req RTUHeader, errRep RTUHeader) {
-	h, ok := m[req.ServerID]
+	h, ok := m[req.SlaveID]
 	if !ok { // This should never happen since req must be valid when sent
-		panic(fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", req.ServerID))
+		panic(fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", req.SlaveID))
 	}
 	h.OnError(req.PDU, errRep.PDU)
 }
@@ -272,7 +272,7 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 // where data is to be filled in by the client handler.
 func DoRTUTransaction(c Client, header RTUHeader) error {
 	errChan := make(chan error)
-	c.StartTransactionToServer(header.ServerID, header.PDU, errChan)
+	c.StartTransactionToServer(header.SlaveID, header.PDU, errChan)
 	return <-errChan
 }
 

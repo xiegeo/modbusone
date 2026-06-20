@@ -20,7 +20,7 @@ type PacketReader interface {
 type rtuPacketReader struct {
 	r             SerialContext // the underlining reader
 	isClient      bool
-	serverId      byte
+	slaveID       byte
 	bidirectional bool
 	last          []byte
 	lastReadAt    time.Time
@@ -33,8 +33,8 @@ func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
-func NewRTUPacketReader2(r SerialContext, isClient bool, serverId byte) PacketReader {
-	return &rtuPacketReader{r: r, isClient: isClient, serverId: serverId}
+func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte) PacketReader {
+	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID}
 }
 
 // NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
@@ -87,7 +87,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			expected = GetRTUBidirectionalSizeFromHeader(p[:read])
 			debugf("GetRTUBidirectionalSizeFromHeader new expected size %v %x", expected, p[:read])
 		} else {
-			expected = GetRTUSizeFromHeader2(p[:read], s.isClient, s.serverId)
+			expected = GetRTUSizeFromHeader2(p[:read], s.isClient, s.slaveID)
 			debugf("GetRTUSizeFromHeader new expected size %v %v %x", expected, s.isClient, p[:read])
 		}
 		if expected > read-1 { // some devices returns immediately on first byte received, so we let it buffer before calling read again.
@@ -163,12 +163,12 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 }
 
 // wip
-func GetRTUSizeFromHeader2(header []byte, isClient bool, serverId byte) int {
+func GetRTUSizeFromHeader2(header []byte, isClient bool, slaveID byte) int {
 	if len(header) < 3 {
 		return 3
 	}
 	packetId := header[0]
-	if isClient || packetId == serverId {
+	if isClient || packetId == slaveID {
 		return GetPDUSizeFromHeader(header[1:], isClient) + 3
 	}
 

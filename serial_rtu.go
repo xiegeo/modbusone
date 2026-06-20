@@ -31,7 +31,7 @@ func GetMaxPDUSize() int {
 
 // A prefix of the RTU
 type RTUHeader struct {
-	ServerID byte
+	SlaveID byte
 	PDU
 }
 
@@ -47,20 +47,20 @@ func MakeRTU(slaveID byte, p PDU) RTU {
 
 func (r RTU) fastGetHeader() RTUHeader {
 	return RTUHeader{
-		ServerID: r.GetServerID(),
-		PDU:      r.fastGetPDU(),
+		SlaveID: r.GetSlaveID(),
+		PDU:     r.fastGetPDU(),
 	}
 }
 
-// GetServerID returns the ServerID inside, or 255 if the RTU is empty.
-func (r RTU) GetServerID() byte {
+// GetSlaveID returns the SlaveID inside, or 255 if the RTU is empty.
+func (r RTU) GetSlaveID() byte {
 	if len(r) == 0 {
-		return 255 // invalid ServerID
+		return 255 // invalid SlaveID
 	}
 	return r[0]
 }
 
-// IsMulticast returns true if ServerID is the multicast address 0.
+// IsMulticast returns true if SlaveID is the multicast address 0.
 func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
 }
