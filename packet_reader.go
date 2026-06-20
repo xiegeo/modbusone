@@ -157,7 +157,7 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 		return 3
 	}
 	if header[0] == 0 {
-		return GetPDUSizeFromHeader(header[1:], true) + 3
+		return GetPDUSizeFromHeader(header[1:], false) + 3
 	}
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
 }
