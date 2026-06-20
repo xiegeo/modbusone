@@ -19,7 +19,15 @@ const MaxPDUSize = 253
 var OverSizeSupport = false
 
 // OverSizeMaxRTU overrides MaxRTUSize when OverSizeSupport is true.
+// It should not be smaller than MaxRTUSize.
 var OverSizeMaxRTU = MaxRTUSize
+
+func GetMaxPDUSize() int {
+	if OverSizeSupport{
+		return max(MaxPDUSize, OverSizeMaxRTU - 3)
+	}
+	return MaxPDUSize
+}
 
 const smallestRTUSize = 4
 

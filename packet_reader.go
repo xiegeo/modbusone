@@ -78,13 +78,14 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		// lets see if there is more to read
 		if s.bidirectional {
 			expected = GetRTUBidirectionalSizeFromHeader(p[:read])
-			debugf("RTUPacketReader new expected size %v %x", expected, p[:read])
+			debugf("GetRTUBidirectionalSizeFromHeader new expected size %v %x", expected, p[:read])
 		} else {
 			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
-			debugf("RTUPacketReader new expected size %v %v %x", expected, s.isClient, p[:read])
+			debugf("GetRTUSizeFromHeader new expected size %v %v %x", expected, s.isClient, p[:read])
 		}
 		if expected > read-1 {  // some devices returns immediately on first byte received, so we let it buffer before calling read again.
-			time.Sleep(s.r.BytesDelay(expected - read))
+			waitForBytes := min(8, expected - read)
+			time.Sleep(s.r.BytesDelay(waitForBytes))
 		}
 	}
 	if read > expected {
@@ -130,10 +131,13 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	}
 	if OverSizeSupport {
 		n := int(header[3])*256 + int(header[4])
+		var overSize int
 		if f.IsUint16() {
-			return 6 + n*2
+			overSize = 6 + n*2
+		}else{
+			overSize = 6 + (n-1)/8 + 1
 		}
-		return 6 + (n-1)/8 + 1
+		return min(GetMaxPDUSize(), overSize)
 	}
 	return 6 + int(header[5])
 }
