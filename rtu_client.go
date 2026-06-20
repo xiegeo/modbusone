@@ -89,10 +89,10 @@ func (a clientActionType) String() string {
 	return fmt.Sprintf("clientActionType %d", a)
 }
 
-// Serve serves RTUClient handlers. Only supports a single SlaveID. 
+// Serve serves RTUClient handlers. Only supports a single SlaveID.
 // Use ServeRTU and MultiIDHandler for 1 client with many servers/slaves.
 func (c *RTUClient) Serve(handler ProtocolHandler) error {
-	return c.ServeRTU(MultiIDHandler{c.SlaveID:handler})
+	return c.ServeRTU(MultiIDHandler{c.SlaveID: handler})
 }
 
 // MultiIDHandler implements a RTUProtocolHandler using any number of ProtocolHandlers, each for a different SlaveID
@@ -100,28 +100,28 @@ type MultiIDHandler map[byte]ProtocolHandler
 
 var _ RTUProtocolHandler = &MultiIDHandler{}
 
-func (m MultiIDHandler) OnRead(rtu RTU) ([]byte, error) {
-	h, ok := m[rtu.GetSlaveID()]
+func (m MultiIDHandler) OnRead(rtu RTUHeader) ([]byte, error) {
+	h, ok := m[rtu.ServerID]
 	if !ok {
-		return nil, fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", rtu.GetSlaveID())
+		return nil, fmt.Errorf("ServerID %v is not defined for MultiIDHandler", rtu.ServerID)
 	}
-	return h.OnRead(rtu.fastGetPDU())
+	return h.OnRead(rtu.PDU)
 }
 
-func (m MultiIDHandler) OnWrite(rtu RTU, data []byte) error {
-	h, ok := m[rtu.GetSlaveID()]
+func (m MultiIDHandler) OnWrite(rtu RTUHeader, data []byte) error {
+	h, ok := m[rtu.ServerID]
 	if !ok {
-		return fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", rtu.GetSlaveID())
+		return fmt.Errorf("ServerID %v is not defined for MultiIDHandler", rtu.ServerID)
 	}
-	return h.OnWrite(rtu.fastGetPDU(), data)
+	return h.OnWrite(rtu.PDU, data)
 }
 
-func (m MultiIDHandler) OnError(req RTU, errRep RTU) {
-	h, ok := m[req.GetSlaveID()]
-	if !ok { // This should never happen since req must be valid when sent 
-		panic(fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", req.GetSlaveID()))
+func (m MultiIDHandler) OnError(req RTUHeader, errRep RTUHeader) {
+	h, ok := m[req.ServerID]
+	if !ok { // This should never happen since req must be valid when sent
+		panic(fmt.Errorf("SlaveID %v is not defined for MultiIDHandler", req.ServerID))
 	}
-	h.OnError(req.fastGetPDU(), errRep.fastGetPDU())
+	h.OnError(req.PDU, errRep.PDU)
 }
 
 // Serve serves RTUClient handlers.
@@ -160,7 +160,7 @@ func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 		ap := act.data.fastGetPDU()
 		afc := ap.GetFunctionCode()
 		if afc.IsWriteToServer() {
-			data, err := handler.OnRead(act.data)
+			data, err := handler.OnRead(act.data.fastGetHeader())
 			if err != nil {
 				act.errChan <- err
 				continue
@@ -220,7 +220,7 @@ func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 				hasErr, fc := rp.GetFunctionCode().SeparateError()
 				if hasErr && fc == afc {
 					atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
-					handler.OnError(act.data, react.data)
+					handler.OnError(act.data.fastGetHeader(), react.data.fastGetHeader())
 					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
 					break READ_LOOP
 				}
@@ -237,7 +237,7 @@ func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 						act.errChan <- err
 						break READ_LOOP
 					}
-					err = handler.OnWrite(act.data, bs)
+					err = handler.OnWrite(act.data.fastGetHeader(), bs)
 					if err != nil {
 						atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					}
@@ -270,13 +270,9 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 //
 // RTU is currently required to be valid, but is not sent as is for write to servers,
 // where data is to be filled in by the client handler.
-func DoRTUTransaction(c Client, rtu RTU) error {
+func DoRTUTransaction(c Client, header RTUHeader) error {
 	errChan := make(chan error)
-	pdu, err := rtu.GetPDU()
-	if err != nil {
-		return err
-	}
-	c.StartTransactionToServer(rtu.GetSlaveID(), pdu, errChan)
+	c.StartTransactionToServer(header.ServerID, header.PDU, errChan)
 	return <-errChan
 }
 

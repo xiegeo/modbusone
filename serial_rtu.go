@@ -23,10 +23,16 @@ var OverSizeSupport = false
 var OverSizeMaxRTU = MaxRTUSize
 
 func GetMaxPDUSize() int {
-	if OverSizeSupport{
-		return max(MaxPDUSize, OverSizeMaxRTU - 3)
+	if OverSizeSupport {
+		return max(MaxPDUSize, OverSizeMaxRTU-3)
 	}
 	return MaxPDUSize
+}
+
+// A prefix of the RTU
+type RTUHeader struct {
+	ServerID byte
+	PDU
 }
 
 const smallestRTUSize = 4
@@ -39,15 +45,22 @@ func MakeRTU(slaveID byte, p PDU) RTU {
 	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }
 
-// GetSlaveID returns the slaveID inside, or 255 if the RTU is empty.
-func (r RTU) GetSlaveID() byte {
+func (r RTU) fastGetHeader() RTUHeader {
+	return RTUHeader{
+		ServerID: r.GetServerID(),
+		PDU:      r.fastGetPDU(),
+	}
+}
+
+// GetServerID returns the ServerID inside, or 255 if the RTU is empty.
+func (r RTU) GetServerID() byte {
 	if len(r) == 0 {
-		return 255 // invalid slaveID
+		return 255 // invalid ServerID
 	}
 	return r[0]
 }
 
-// IsMulticast returns true if slaveID is the multicast address 0.
+// IsMulticast returns true if ServerID is the multicast address 0.
 func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
 }

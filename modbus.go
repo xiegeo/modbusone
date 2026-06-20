@@ -48,7 +48,7 @@ type RTUProtocolHandler interface {
 	// For write to server on server side, data is part of req.
 	// For read from server on client side, req is the req from client, and
 	// data is part of reply.
-	OnWrite(req RTU, data []byte) error
+	OnWrite(req RTUHeader, data []byte) error
 
 	// OnRead is called on the server for a read request,
 	// or on the client before write request.
@@ -57,11 +57,11 @@ type RTUProtocolHandler interface {
 	// For write to server on the client side, req is from local action
 	// (such as RTUClient.StartTransaction), and data will be added to req to send
 	// to server.
-	OnRead(req RTU) (data []byte, err error)
+	OnRead(req RTUHeader) (data []byte, err error)
 
 	// OnError is called on the client when it receive a well formed
 	// error from server
-	OnError(req RTU, errRep RTU)
+	OnError(req RTUHeader, errRep RTUHeader)
 }
 
 // FunctionCode Modbus function codes.

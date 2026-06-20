@@ -18,16 +18,23 @@ type PacketReader interface {
 }
 
 type rtuPacketReader struct {
-	r              SerialContext // the underlining reader
-	isClient       bool
-	bidirectional  bool
-	last           []byte
-	lastReadAt     time.Time
+	r             SerialContext // the underlining reader
+	isClient      bool
+	serverId      byte
+	bidirectional bool
+	last          []byte
+	lastReadAt    time.Time
 }
 
 // NewRTUPacketReader create a Reader that attempt to read full packets.
+// Please use NewRTUPacketReader2 then serving on a multi-server connection.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient}
+}
+
+// NewRTUPacketReader2 create a Reader that attempt to read full packets.
+func NewRTUPacketReader2(r SerialContext, isClient bool, serverId byte) PacketReader {
+	return &rtuPacketReader{r: r, isClient: isClient, serverId: serverId}
 }
 
 // NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
@@ -49,7 +56,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 		} else {
 			// time.Sleep(time.Duration(rand.Int63n(int64(time.Second / 10))))
 			n, err := s.r.Read(p[read:])
-			if n < 0 {  // some users report n = -1 on error
+			if n < 0 { // some users report n = -1 on error
 				n = 0
 			}
 			now := time.Now()
@@ -80,11 +87,11 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			expected = GetRTUBidirectionalSizeFromHeader(p[:read])
 			debugf("GetRTUBidirectionalSizeFromHeader new expected size %v %x", expected, p[:read])
 		} else {
-			expected = GetRTUSizeFromHeader(p[:read], s.isClient)
+			expected = GetRTUSizeFromHeader2(p[:read], s.isClient, s.serverId)
 			debugf("GetRTUSizeFromHeader new expected size %v %v %x", expected, s.isClient, p[:read])
 		}
-		if expected > read-1 {  // some devices returns immediately on first byte received, so we let it buffer before calling read again.
-			waitForBytes := min(8, expected - read)
+		if expected > read-1 { // some devices returns immediately on first byte received, so we let it buffer before calling read again.
+			waitForBytes := min(8, expected-read)
 			time.Sleep(s.r.BytesDelay(waitForBytes))
 		}
 	}
@@ -134,7 +141,7 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 		var overSize int
 		if f.IsUint16() {
 			overSize = 6 + n*2
-		}else{
+		} else {
 			overSize = 6 + (n-1)/8 + 1
 		}
 		return min(GetMaxPDUSize(), overSize)
@@ -143,13 +150,26 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 }
 
 // GetRTUSizeFromHeader returns the expected sized of a RTU packet with the given
-// RTU header, if not enough info is in the header, then it returns the shortest possible.
+// RTU header, if not enough info is in the header, it returns the shortest possible.
 // isClient is true if a client/master is reading the packet.
 func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 3 {
 		return 3
 	}
 	return GetPDUSizeFromHeader(header[1:], isClient) + 3
+}
+
+// wip
+func GetRTUSizeFromHeader2(header []byte, isClient bool, serverId byte) int {
+	if len(header) < 3 {
+		return 3
+	}
+	packetId := header[0]
+	if isClient || packetId == serverId {
+		return GetPDUSizeFromHeader(header[1:], isClient) + 3
+	}
+
+	return GetRTUBidirectionalSizeFromHeader(header)
 }
 
 // GetRTUBidirectionalSizeFromHeader is like GetRTUSizeFromHeader, except for any direction
