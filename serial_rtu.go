@@ -2,6 +2,7 @@ package modbusone
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/xiegeo/modbusone/crc"
 )
@@ -22,7 +23,12 @@ var OverSizeSupport = false
 // It should not be smaller than MaxRTUSize.
 var OverSizeMaxRTU = MaxRTUSize
 
+// OverSizeLock is used to fix data race issues related to changing globe over sized options
+var OverSizeLock = sync.RWMutex{}
+
 func GetMaxPDUSize() int {
+	OverSizeLock.RLock()
+	defer OverSizeLock.RUnlock()
 	if OverSizeSupport {
 		return max(MaxPDUSize, OverSizeMaxRTU-3)
 	}

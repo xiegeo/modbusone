@@ -35,8 +35,12 @@ func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
-// Set twoWire to true for 2 wire and false for 4 wire.
-func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte, twoWire bool) PacketReader {
+// Set TwoWire to true in SerialContextV3.Option for 2 wire and false for 4 wire.
+func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte) PacketReader {
+	twoWire := false
+	if v3, ok := r.(OptionContext); ok {
+		twoWire = v3.GetOption().TwoWire
+	}
 	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, twoWire: twoWire}
 }
 
@@ -95,7 +99,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				debugf("GetRTUSizeFromHeader2 new expected size %v %v %x", expected, s.isClient, p[:read])
 			} else {
 				expected = GetRTUSizeFromHeader(p[:read], s.isClient)
-				debugf("GetRTUSizeFromHeader new expected size %v %v %x", expected, s.isClient, p[:read])
+				debugf("GetRTUSizeFromHeader new expected size %v isClient:%v %x", expected, s.isClient, p[:read])
 			}
 			if expected > read-1 { // some devices returns immediately on first byte received, so we let it buffer before calling read again.
 				waitForBytes := min(16, expected-read)
@@ -145,6 +149,8 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 6 {
 		return 6
 	}
+	OverSizeLock.RLock()
+	defer OverSizeLock.RUnlock()
 	if OverSizeSupport {
 		n := int(header[3])*256 + int(header[4])
 		var overSize int

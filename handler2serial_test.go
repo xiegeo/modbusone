@@ -3,6 +3,7 @@ package modbusone_test
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -18,20 +19,22 @@ type mockSerial struct {
 	s Stats
 	*bufio.Reader
 	io.Writer
+	t           *testing.T
 	closers     []io.Closer
 	name        string
 	LastWritten []byte
 	readLock    sync.Mutex
+	Option
 }
 
-func newMockSerial(name string, r io.Reader, w io.Writer, c ...io.Closer) *mockSerial {
+func newMockSerial(t *testing.T, name string, r io.Reader, w io.Writer, c ...io.Closer) *mockSerial {
 	br := bufio.NewReaderSize(r, 256)
-	return &mockSerial{Reader: br, Writer: w, closers: c, name: name}
+	return &mockSerial{Reader: br, Writer: w, t: t, closers: c, name: name}
 }
 
 func (s *mockSerial) Write(data []byte) (int, error) {
 	s.LastWritten = data
-	// debugf("%v write %x", s.name, data)
+	s.t.Logf("%v write %x", s.name, data)
 	n, err := s.Writer.Write(data)
 	return n, err
 }
@@ -39,6 +42,8 @@ func (s *mockSerial) Write(data []byte) (int, error) {
 func (s *mockSerial) Read(p []byte) (int, error) {
 	s.readLock.Lock()
 	n, err := s.Reader.Read(p)
+	//s.t.Logf("%v read %x, error %v", s.name, p[:n], err)
+	fmt.Printf("%v read %x, error %v\n", s.name, p[:n], err)
 	s.readLock.Unlock()
 	if err == nil {
 		go func() {
@@ -64,6 +69,10 @@ func (s *mockSerial) MinDelay() time.Duration {
 func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 func (s *mockSerial) Stats() *Stats                  { return &s.s }
 
+func (s *mockSerial) GetOption() *Option {
+	return &s.Option
+}
+
 // TestHandler runs through each of simplymodbus.ca's samples, conforms both
 // end-to-end behavior and wire format.
 func TestHandler(t *testing.T) {
@@ -72,8 +81,8 @@ func TestHandler(t *testing.T) {
 	r1, w1 := io.Pipe() // pipe from client to server
 	r2, w2 := io.Pipe() // pipe from server to client
 
-	cc := newMockSerial("c", r2, w1, w1) // client connection
-	sc := newMockSerial("s", r1, w2, w2) // server connection
+	cc := newMockSerial(t, "c", r2, w1, w1) // client connection
+	sc := newMockSerial(t, "s", r1, w2, w2) // server connection
 
 	client := NewRTUClient(cc, slaveID)
 	defer client.Close()

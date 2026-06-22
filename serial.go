@@ -31,6 +31,19 @@ type SerialContextV2 interface {
 	PacketCutoffDuration(n int) time.Duration
 }
 
+type OptionContext interface {
+	// GetOption returns the Option used to create the serial context.
+	// The returned option should not be modified when it is in use.
+	GetOption() *Option
+}
+
+// SerialContextV3 is an superset interface of SerialContextV2, to support
+// Option in an extendable way
+type SerialContextV3 interface {
+	SerialContextV2
+	GetOption() *Option
+}
+
 type serial struct {
 	s        Stats // first for alignment
 	conn     io.ReadWriteCloser
@@ -38,15 +51,20 @@ type serial struct {
 	Option
 }
 
-var _ SerialContextV2 = &serial{} // serial implements SerialContextV2
+var _ SerialContextV3 = &serial{} // serial implements SerialContextV2
 
 type Option struct {
+	_ struct{} // enforces keyed literals
+
 	CPUHiccup          time.Duration
-	ReturnShortPackets bool
+	ReturnShortPackets bool // unused
+	TwoWire            bool // all slave/servers read and write on 2 wires (sees each others responses)
 }
 
 // Stats records statics on a SerialContext, must be aligned to 64 bits on 32 bit systems.
 type Stats struct {
+	_ struct{} // enforces keyed literals
+
 	ReadPackets      int64
 	CrcErrors        int64
 	RemoteErrors     int64
@@ -124,6 +142,10 @@ func (s *serial) PacketCutoffDuration(n int) time.Duration {
 		return PacketCutoffDuration(s.baudRate, n, DefaultCPUHiccup)
 	}
 	return PacketCutoffDuration(s.baudRate, n, s.CPUHiccup)
+}
+
+func (s *serial) GetOption() *Option {
+	return &s.Option
 }
 
 // MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 micros.
