@@ -35,7 +35,7 @@ func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
-// Set 2 wire to true for 2 wire and false for 4 wire.
+// Set twoWire to true for 2 wire and false for 4 wire.
 func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte, twoWire bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, twoWire: twoWire}
 }
