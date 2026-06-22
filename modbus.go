@@ -426,3 +426,22 @@ func (p PDU) MakeWriteReply() PDU {
 	}
 	return p
 }
+
+func (p PDU) IsRequest() (bool, error) {
+	err := p.ValidateRequest() // check valid function code
+	if err != nil {
+		return false, nil
+	}
+	reqSize := GetPDUSizeFromHeader(p, false)
+	repSize := GetPDUSizeFromHeader(p, true)
+	if reqSize == repSize && reqSize == len(p) {
+		return false, errors.New("PDU can be both")
+	}
+	if reqSize == len(p) {
+		return true, nil
+	}
+	if repSize == len(p) {
+		return false, nil
+	}
+	return false, errors.New("PDU is badly formed")
+}
