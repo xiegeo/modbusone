@@ -243,6 +243,10 @@ Development tools:
 
 ## Breaking Changes
 
+2026-06 v1.1.0
+
+Option and Stats structs enforces keyed literals (upgrades go vet warning to compiling error)
+
 2022-09-09 v1.0.0
 
 V1 release has the following depreciated identifiers removed:
