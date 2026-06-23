@@ -110,14 +110,21 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			if crc.Validate(p[:expected]) {
 				atomic.AddInt64(&s.r.Stats().LongReadWarnings, 1)
 				s.last = append(s.last[:0], p[expected:read]...)
-				debugf("long read warning %v / %v", expected, read)
+				debugf("long read warning expected:%v read:%v data:%x", expected, read, p[:read])
 				s.lastRTU = append(s.lastRTU[:0], p[:expected]...)
 				return expected, nil
 			}
 		}
 		if crc.Validate(p[:read]) {
+			if read != expected {
+				atomic.AddInt64(&s.r.Stats().FormateWarnings, 1)
+				debugf("formate warning expected:%v read:%v data:%x", expected, read, p[:read])
+			}
 			s.lastRTU = append(s.lastRTU[:0], p[:read]...)
 			return read, nil
+		} else {
+			atomic.AddInt64(&s.r.Stats().CrcErrors, 1)
+			debugf("crc error expected:%v read:%v data:%x", expected, read, p[:read])
 		}
 	}
 }
