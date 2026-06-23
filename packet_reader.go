@@ -159,7 +159,7 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 		} else {
 			overSize = 6 + (n-1)/8 + 1
 		}
-		return min(GetMaxPDUSize(), overSize)
+		return min(getMaxPDUSize(), overSize)
 	}
 	return 6 + int(header[5])
 }

@@ -29,6 +29,10 @@ var OverSizeLock = sync.RWMutex{}
 func GetMaxPDUSize() int {
 	OverSizeLock.RLock()
 	defer OverSizeLock.RUnlock()
+	return getMaxPDUSize()
+}
+
+func getMaxPDUSize() int {
 	if OverSizeSupport {
 		return max(MaxPDUSize, OverSizeMaxRTU-3)
 	}

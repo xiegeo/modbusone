@@ -69,6 +69,7 @@ func TestOverSize(t *testing.T) {
 	defer func() {
 		OverSizeLock.Lock()
 		OverSizeSupport = false
+		OverSizeMaxRTU = MaxRTUSize
 		OverSizeLock.Unlock()
 	}()
 

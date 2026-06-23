@@ -17,6 +17,12 @@ func TestMultiServer(t *testing.T) {
 
 	servers := byte(2)
 	nodes := connectMock2wNodes(t, int(servers))
+	defer func() {
+		nodes.client.Close()
+		for _, s := range nodes.servers {
+			s.Close()
+		}
+	}()
 
 	// writes data
 	for i := byte(1); i <= servers; i++ {
