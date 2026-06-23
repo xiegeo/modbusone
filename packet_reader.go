@@ -111,12 +111,12 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				atomic.AddInt64(&s.r.Stats().LongReadWarnings, 1)
 				s.last = append(s.last[:0], p[expected:read]...)
 				debugf("long read warning %v / %v", expected, read)
-				s.lastRTU = RTU(p[:expected])
+				s.lastRTU = append(s.lastRTU[:0], p[:expected]...)
 				return expected, nil
 			}
 		}
 		if crc.Validate(p[:read]) {
-			s.lastRTU = RTU(p[:read])
+			s.lastRTU = append(s.lastRTU[:0], p[:read]...)
 			return read, nil
 		}
 	}
