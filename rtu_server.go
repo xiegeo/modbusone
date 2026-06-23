@@ -41,7 +41,7 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	delay := s.com.MinDelay()
 
 	var rb []byte
-	if OverSizeSupport {
+	if IsOverSizeSupported() {
 		rb = make([]byte, OverSizeMaxRTU)
 	} else {
 		rb = make([]byte, MaxRTUSize)

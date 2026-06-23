@@ -34,7 +34,8 @@ func connectToMockServer(t *testing.T, slaveID byte) io.ReadWriteCloser {
 }
 
 func TestOverSize(t *testing.T) {
-	// DebugOut = os.Stdout
+	mockSerialRandomRead = false
+	defer func() { mockSerialRandomRead = mockSerialRandomReadDefault }()
 	slaveID := byte(0x11)
 	cct := connectToMockServer(t, slaveID)
 	defer cct.Close()

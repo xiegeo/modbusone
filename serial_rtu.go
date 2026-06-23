@@ -19,12 +19,23 @@ const MaxPDUSize = 253
 // Also change OverSizeMaxRTU properly.
 var OverSizeSupport = false
 
+func IsOverSizeSupported() bool {
+	OverSizeLock.RLock()
+	o := OverSizeSupport
+	OverSizeLock.RUnlock()
+	return o
+}
+
 // OverSizeMaxRTU overrides MaxRTUSize when OverSizeSupport is true.
 // It should not be smaller than MaxRTUSize.
 var OverSizeMaxRTU = MaxRTUSize
 
 // OverSizeLock is used to fix data race issues related to changing globe over sized options
 var OverSizeLock = sync.RWMutex{}
+
+func GetMaxRTUSize() int {
+	return GetMaxPDUSize() + 3 // 1 byte slave id + 2 bytes of crc
+}
 
 func GetMaxPDUSize() int {
 	OverSizeLock.RLock()

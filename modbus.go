@@ -361,7 +361,7 @@ func (p PDU) GetRequestValues() ([]byte, error) {
 		debugf("fc %v got %v PDU bytes, expected > 6", p.GetFunctionCode(), len(p))
 		return nil, EcIllegalDataValue
 	}
-	if lb != int(p[5]) && !OverSizeSupport {
+	if lb != int(p[5]) && !IsOverSizeSupported() {
 		debugf("declared %v bytes of data, but got %v bytes", p[5], lb)
 		return nil, EcIllegalDataValue
 	}
