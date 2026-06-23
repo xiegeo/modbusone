@@ -3,21 +3,17 @@ package modbusone_test
 import (
 	"fmt"
 	"io"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/xiegeo/coloredgoroutine"
 	. "github.com/xiegeo/modbusone"
 )
 
 func TestMultiServer(t *testing.T) {
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	testFailoverClientCount++
-	// fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
-	defer func() {
-		SetDebugOut(nil)
-	}()
+	//	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	//	defer func() {
+	//		SetDebugOut(nil)
+	//	}()
 
 	servers := byte(2)
 	nodes := connectMock2wNodes(t, int(servers))

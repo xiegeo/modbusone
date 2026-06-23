@@ -152,8 +152,8 @@ func TestFailoverServer(t *testing.T) {
 
 	_ = os.Stdout
 	_ = coloredgoroutine.Colors
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	defer func() { SetDebugOut(nil) }()
+//	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+//	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)

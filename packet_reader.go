@@ -194,7 +194,7 @@ func GetRTUSizeFromHeader2(header []byte, isClient bool, slaveID byte, lastPacke
 	}
 	packetId := header[0]
 	if isClient || packetId == slaveID {
-		return GetRTUSizeFromHeader(header[1:], isClient)
+		return GetRTUSizeFromHeader(header, isClient)
 	}
 
 	return GetRTUBidirectionalSizeFromHeader2(header, lastPacket)
@@ -240,14 +240,14 @@ func GetRTUBidirectionalSizeFromHeader2(header []byte, lastPacket RTU) int {
 
 func getRTUBidirectionalSizeFromHeaderWithPrefer(header []byte, isClient bool) int {
 	size := GetRTUSizeFromHeader(header, isClient)
-	if size < len(header) {
+	if size > len(header) {
 		return size
 	}
 	if crc.Validate(header[:size]) {
 		return size
 	}
 	size2 := GetRTUSizeFromHeader(header, !isClient)
-	if size2 < len(header) {
+	if size2 > len(header) {
 		return size2
 	}
 	if crc.Validate(header[:size2]) {

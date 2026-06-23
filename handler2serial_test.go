@@ -3,7 +3,6 @@ package modbusone_test
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -43,7 +42,7 @@ func (s *mockSerial) Read(p []byte) (int, error) {
 	s.readLock.Lock()
 	n, err := s.Reader.Read(p)
 	//s.t.Logf("%v read %x, error %v", s.name, p[:n], err)
-	fmt.Printf("%v read %x, error %v\n", s.name, p[:n], err)
+	//fmt.Printf("%v read %x, error %v\n", s.name, p[:n], err)
 	s.readLock.Unlock()
 	if err == nil {
 		go func() {

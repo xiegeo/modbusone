@@ -87,12 +87,12 @@ func TestFailoverClient(t *testing.T) {
 
 	_ = os.Stdout
 	_ = coloredgoroutine.Colors
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	testFailoverClientCount++
+	//	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	//	testFailoverClientCount++
 	// fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
-	defer func() {
-		SetDebugOut(nil)
-	}()
+	//defer func() {
+	//	SetDebugOut(nil)
+	//}()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcWriteSingleRegister, 0, 1, 1, nil)
