@@ -52,6 +52,9 @@ type FailoverSerialConn struct {
 	misses    int32
 }
 
+// FailoverSerialConn should implement SerialContextV3
+var _ SerialContextV3 = &FailoverSerialConn{}
+
 // NewFailoverConn adds failover function to a SerialContext.
 func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
@@ -75,6 +78,17 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 // BytesDelay implements BytesDelay for SerialContext.
 func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
 	return s.SerialContext.BytesDelay(n)
+}
+
+func (s *FailoverSerialConn) PacketCutoffDuration(n int) time.Duration {
+	return s.BytesDelay(n) + DefaultCPUHiccup
+}
+
+func (s *FailoverSerialConn) GetOption() *Option {
+	if o, ok := s.SerialContext.(OptionContext); ok {
+		return o.GetOption()
+	}
+	return nil
 }
 
 func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
