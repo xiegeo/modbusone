@@ -84,11 +84,11 @@ func (s *FailoverSerialConn) PacketCutoffDuration(n int) time.Duration {
 	return s.BytesDelay(n) + DefaultCPUHiccup
 }
 
-func (s *FailoverSerialConn) GetOption() *Option {
+func (s *FailoverSerialConn) GetOption() Option {
 	if o, ok := s.SerialContext.(OptionContext); ok {
 		return o.GetOption()
 	}
-	return nil
+	return Option{}
 }
 
 func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {

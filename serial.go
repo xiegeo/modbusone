@@ -33,15 +33,14 @@ type SerialContextV2 interface {
 
 type OptionContext interface {
 	// GetOption returns the Option used to create the serial context.
-	// The returned option should not be modified when it is in use.
-	GetOption() *Option
+	GetOption() Option
 }
 
 // SerialContextV3 is an superset interface of SerialContextV2, to support
 // Option in an extendable way
 type SerialContextV3 interface {
 	SerialContextV2
-	GetOption() *Option
+	OptionContext
 }
 
 type serial struct {
@@ -100,11 +99,16 @@ func (s *Stats) String() string {
 		atomic.LoadInt64(&s.IDDrops), atomic.LoadInt64(&s.OtherDrops))
 }
 
-// NewSerialContext creates a SerialContext from any io.ReadWriteCloser.
+// NewSerialContext creates a SerialContext from any io.ReadWriteCloser,
+// with baudRate. Please use NewSerialContextWithOption for additional options.
+// It also implement SerialContextV2 and SerialContextV3
 func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate}
 }
 
+// NewSerialContextWithOption creates a SerialContext from any io.ReadWriteCloser,
+// with baudRate and option.
+// It also implement SerialContextV2 and SerialContextV3
 func NewSerialContextWithOption(conn io.ReadWriteCloser, baudRate int64, option Option) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate, Option: option}
 }
@@ -144,8 +148,8 @@ func (s *serial) PacketCutoffDuration(n int) time.Duration {
 	return PacketCutoffDuration(s.baudRate, n, s.CPUHiccup)
 }
 
-func (s *serial) GetOption() *Option {
-	return &s.Option
+func (s *serial) GetOption() Option {
+	return s.Option
 }
 
 // MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 micros.

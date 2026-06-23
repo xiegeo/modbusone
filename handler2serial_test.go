@@ -83,8 +83,8 @@ func (s *mockSerial) MinDelay() time.Duration {
 func (s *mockSerial) BytesDelay(n int) time.Duration { return 0 }
 func (s *mockSerial) Stats() *Stats                  { return &s.s }
 
-func (s *mockSerial) GetOption() *Option {
-	return &s.Option
+func (s *mockSerial) GetOption() Option {
+	return s.Option
 }
 
 // TestHandler runs through each of simplymodbus.ca's samples, conforms both
