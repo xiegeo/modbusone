@@ -22,7 +22,7 @@ type rtuPacketReader struct {
 	isClient      bool
 	slaveID       byte
 	bidirectional bool
-	twoWire       bool
+	option        Option
 	last          []byte
 	lastRTU       RTU
 	lastReadAt    time.Time
@@ -34,13 +34,17 @@ type rtuPacketReader struct {
 // Where a server can see responses from other servers, and slaveID is useful for
 // disambiguation.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
-	return &rtuPacketReader{r: r, isClient: isClient}
+	var option Option
+	if o, ok := r.(OptionContext); ok {
+		option = o.GetOption()
+	}
+	return &rtuPacketReader{r: r, isClient: isClient, option: option}
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
 // Set TwoWire to true in r.Option for 2 wire and false for 4 wire.
 func NewRTUPacketReader2(r SerialContextV3, isClient bool, slaveID byte) PacketReader {
-	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, twoWire: r.GetOption().TwoWire}
+	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, option: r.GetOption()}
 }
 
 // NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
@@ -94,7 +98,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 			if s.bidirectional {
 				expected = GetRTUBidirectionalSizeFromHeader(p[:read])
 				debugf("GetRTUBidirectionalSizeFromHeader new expected size %v %x", expected, p[:read])
-			} else if s.twoWire {
+			} else if s.option.TwoWire {
 				expected = GetRTUSizeFromHeader2(p[:read], s.isClient, s.slaveID, s.lastRTU)
 				debugf("GetRTUSizeFromHeader2 new expected size %v %v %x", expected, s.isClient, p[:read])
 			} else {
@@ -102,7 +106,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 				debugf("GetRTUSizeFromHeader new expected size %v isClient:%v %x", expected, s.isClient, p[:read])
 			}
 			if expected > read-1 { // some devices returns immediately on first byte received, so we let it buffer before calling read again.
-				waitForBytes := min(16, expected-read)
+				waitForBytes := min(s.option.SleepBufferBytes, expected-read)
 				time.Sleep(s.r.BytesDelay(waitForBytes))
 			}
 		}

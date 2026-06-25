@@ -23,7 +23,11 @@ type RTUServer struct {
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	pr, ok := com.(PacketReader)
 	if !ok {
-		pr = NewRTUPacketReader2(com, false, slaveID)
+		if v3, ok := com.(SerialContextV3); ok {
+			pr = NewRTUPacketReader2(v3, false, slaveID)
+		} else {
+			pr = NewRTUPacketReader(com, false)
+		}
 	}
 	r := RTUServer{
 		com:          com,

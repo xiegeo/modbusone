@@ -58,6 +58,7 @@ type Option struct {
 	CPUHiccup          time.Duration
 	ReturnShortPackets bool // unused
 	TwoWire            bool // all slave/servers read and write on 2 wires (sees each others responses)
+	SleepBufferBytes   int  // some reader return on first bytes read, use this to save some CPU
 }
 
 // Stats records statics on a SerialContext, must be aligned to 64 bits on 32 bit systems.
