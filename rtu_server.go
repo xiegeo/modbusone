@@ -19,7 +19,7 @@ type RTUServer struct {
 	SlaveID      byte
 }
 
-// NewRTUServer creates a RTU server on SerialContext listening on slaveID.
+// If com already implements PacketReader, it uses that reader; otherwise it creates one.
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	pr, ok := com.(PacketReader)
 	if !ok {

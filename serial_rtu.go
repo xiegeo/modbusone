@@ -19,6 +19,9 @@ const MaxPDUSize = 253
 // Also change OverSizeMaxRTU properly.
 var OverSizeSupport = false
 
+// IsOverSizeSupported reports whether oversized RTU and PDU sizes are enabled.
+// 
+// @returns `true` if oversized size support is enabled, `false` otherwise.
 func IsOverSizeSupported() bool {
 	OverSizeLock.RLock()
 	o := OverSizeSupport
@@ -33,16 +36,21 @@ var OverSizeMaxRTU = MaxRTUSize
 // OverSizeLock is used to fix data race issues related to changing globe over sized options
 var OverSizeLock = sync.RWMutex{}
 
+// GetMaxRTUSize returns the maximum Modbus RTU frame size in bytes.
+// It includes one byte for the slave ID and two bytes for the CRC.
+// @returns The maximum RTU frame size in bytes.
 func GetMaxRTUSize() int {
 	return GetMaxPDUSize() + 3 // 1 byte slave id + 2 bytes of crc
 }
 
+// When oversize support is enabled, the configured oversize limit is used.
 func GetMaxPDUSize() int {
 	OverSizeLock.RLock()
 	defer OverSizeLock.RUnlock()
 	return getMaxPDUSize()
 }
 
+// getMaxPDUSize returns the current maximum PDU size, including any oversize override.
 func getMaxPDUSize() int {
 	if OverSizeSupport {
 		return max(MaxPDUSize, OverSizeMaxRTU-3)
@@ -61,7 +69,7 @@ const smallestRTUSize = 4
 // RTU is the Modbus RTU Application Data Unit.
 type RTU []byte
 
-// MakeRTU makes a RTU with slaveID and PDU.
+// It appends the CRC checksum to the frame.
 func MakeRTU(slaveID byte, p PDU) RTU {
 	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }

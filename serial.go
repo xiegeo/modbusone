@@ -101,14 +101,17 @@ func (s *Stats) String() string {
 
 // NewSerialContext creates a SerialContext from any io.ReadWriteCloser,
 // with baudRate. Please use NewSerialContextWithOption for additional options.
-// It also implement SerialContextV2 and SerialContextV3
+// NewSerialContext creates a serial context for the given connection and baud rate.
+// It returns a context with default options.
 func NewSerialContext(conn io.ReadWriteCloser, baudRate int64) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate}
 }
 
 // NewSerialContextWithOption creates a SerialContext from any io.ReadWriteCloser,
 // with baudRate and option.
-// It also implement SerialContextV2 and SerialContextV3
+// NewSerialContextWithOption creates a serial context with the given connection,
+// baud rate, and options. The returned context also satisfies SerialContextV2
+// and SerialContextV3.
 func NewSerialContextWithOption(conn io.ReadWriteCloser, baudRate int64, option Option) SerialContext {
 	return &serial{s: Stats{}, conn: conn, baudRate: baudRate, Option: option}
 }
@@ -152,7 +155,9 @@ func (s *serial) GetOption() Option {
 	return s.Option
 }
 
-// MinDelay returns the minimum Delay of 3.5 bytes between packets or 1750 micros.
+// MinDelay computes the minimum delay required between packets for the given baud rate.
+// For baud rates at or below 19,200, it uses the time needed to transmit 3.5 characters on the wire.
+// @returns The minimum packet delay.
 func MinDelay(baudRate int64) time.Duration {
 	delay := 1750 * time.Microsecond
 	br := time.Duration(baudRate)

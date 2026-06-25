@@ -55,7 +55,7 @@ type FailoverSerialConn struct {
 // FailoverSerialConn should implement SerialContextV3
 var _ SerialContextV3 = &FailoverSerialConn{}
 
-// NewFailoverConn adds failover function to a SerialContext.
+// initializes the bidirectional RTU packet reader.
 func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
 		SerialContext:          sc,

@@ -29,13 +29,14 @@ type rtuPacketReader struct {
 }
 
 // NewRTUPacketReader create a Reader that attempt to read full packets.
-// Please use NewRTUPacketReader2 when serving on a 2 wire multi-server connection.
+// The isClient flag selects the Modbus role used when inferring packet length.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient}
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
-// Set TwoWire to true in SerialContextV3.Option for 2 wire and false for 4 wire.
+// NewRTUPacketReader2 creates an RTU packet reader that supports multi-server
+// reads on a serial line and uses the configured TwoWire option when available.
 func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte) PacketReader {
 	twoWire := false
 	if v3, ok := r.(OptionContext); ok {
@@ -45,7 +46,7 @@ func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte) PacketRea
 }
 
 // NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
-// that comes from either server or client.
+// NewRTUBidirectionalPacketReader creates a PacketReader that accepts RTU frames from either direction.
 func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
 	return &rtuPacketReader{r: r, bidirectional: true}
 }
@@ -131,7 +132,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 
 // GetPDUSizeFromHeader returns the expected sized of a PDU packet with the given
 // PDU header, if not enough info is in the header, then it returns the shortest possible.
-// isClient is true if a client/master is reading the packet.
+// function-specific length.
 func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 2 {
 		return 2
@@ -175,7 +176,9 @@ func GetPDUSizeFromHeader(header []byte, isClient bool) int {
 // RTU header, if not enough info is in the header, it returns the shortest possible.
 // isClient is true if a client/master is reading the packet.
 // This function only works properly for 1 to 1 communications.
-// Please use GetRTUSizeFromHeader2 for multi slave/server on the same serial port.
+// GetRTUSizeFromHeader infers the expected RTU frame length from the header bytes.
+// If the first byte is 0, it treats the frame as a special case and sizes it as a
+// server response.
 func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 	if len(header) < 3 {
 		return 3
@@ -194,7 +197,8 @@ func GetRTUSizeFromHeader(header []byte, isClient bool) int {
 // If isClient is false, slaveID is use to check if header data could common from another slave.
 //
 // If there are multiple slave/server on the same serial port, lastPacket is used to
-// disambiguate between requests and replies when necessary.
+// GetRTUSizeFromHeader2 infers the expected RTU frame length for multi-slave or two-wire reads.
+// It uses the slave ID and the previously accepted packet to choose the most likely direction when the frame source is ambiguous.
 func GetRTUSizeFromHeader2(header []byte, isClient bool, slaveID byte, lastPacket RTU) int {
 	if len(header) < 3 {
 		return 3
@@ -211,7 +215,10 @@ func GetRTUSizeFromHeader2(header []byte, isClient bool, slaveID byte, lastPacke
 // by checking the CRC for disambiguation of length.
 //
 // There is currently a slight possibly that a long pack happens to crc correctly to a shorter packet,
-// please use GetRTUBidirectionalSizeFromHeader2 for increased safety
+// GetRTUBidirectionalSizeFromHeader returns the expected RTU frame length for a header when the
+// packet direction is unknown.
+// It checks the request and reply interpretations and uses CRC validation to choose the matching
+// length when possible.
 func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	s := GetRTUSizeFromHeader(header, false)
 	l := GetRTUSizeFromHeader(header, true)
@@ -233,6 +240,9 @@ func GetRTUBidirectionalSizeFromHeader(header []byte) int {
 	return l
 }
 
+// GetRTUBidirectionalSizeFromHeader2 infers the expected RTU frame length using the previously accepted packet to prefer a direction.
+//
+// If the previous packet matches its request length, the current packet is sized as a slave response; otherwise it is sized as a master request.
 func GetRTUBidirectionalSizeFromHeader2(header []byte, lastPacket RTU) int {
 	if len(lastPacket) == 0 {
 		return getRTUBidirectionalSizeFromHeaderWithPrefer(header, false)
@@ -245,6 +255,10 @@ func GetRTUBidirectionalSizeFromHeader2(header []byte, lastPacket RTU) int {
 	return getRTUBidirectionalSizeFromHeaderWithPrefer(header, true)
 }
 
+// getRTUBidirectionalSizeFromHeaderWithPrefer returns the RTU frame size for the
+// preferred direction when it matches the packet CRC, or the opposite direction
+// when that is the only validated candidate. If neither candidate validates, it
+// returns the smaller size.
 func getRTUBidirectionalSizeFromHeaderWithPrefer(header []byte, isClient bool) int {
 	size := GetRTUSizeFromHeader(header, isClient)
 	if size > len(header) {
