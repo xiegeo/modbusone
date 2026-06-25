@@ -30,6 +30,10 @@ var (
 	verbose = flag.Bool("v", false, "prints debugging information")
 )
 
+// main configures the Modbus RTU serial connection and runs the program as a
+// client or server over the selected slave ID. It serves requests using a
+// memory space, and optionally pre-fills that memory with none-zero data, or
+// prints serial statistics on shutdown or interrupt.
 func main() {
 	flag.Parse()
 	if *verbose {
@@ -145,6 +149,8 @@ func main() {
 
 const size = 0x10000 // 65536 addresses (0x0000 - 0xFFFF)
 
+// Total memory footprint (approx):
+// 64 KB + 64 KB + 128 KB + 128 KB ≈ 384 KB
 var (
 	// Discrete Inputs (read-only boolean bits)
 	// Memory: 65536 * 1 byte ≈ 64 KB
@@ -163,9 +169,10 @@ var (
 	holdingRegisters [size]uint16
 )
 
-// Total memory footprint (approx):
-// 64 KB + 64 KB + 128 KB + 128 KB ≈ 384 KB
-
+// fillAm3 initializes the in-memory Modbus data with deterministic sample values.
+// It sets discrete inputs to true every third address, and coils to true inversely,
+// input registers to three times the address, and holding registers to 0xFFFF minus
+// the address.
 func fillAm3() {
 	for i := range discreteInputs {
 		discreteInputs[i] = i%3 == 0

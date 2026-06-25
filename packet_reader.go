@@ -29,19 +29,18 @@ type rtuPacketReader struct {
 }
 
 // NewRTUPacketReader create a Reader that attempt to read full packets.
+// The isClient flag selects the Modbus role used when inferring packet length.
 // Please use NewRTUPacketReader2 when serving on a 2 wire multi-server connection.
+// Where a server can see responses from other servers, and slaveID is useful for
+// disambiguation.
 func NewRTUPacketReader(r SerialContext, isClient bool) PacketReader {
 	return &rtuPacketReader{r: r, isClient: isClient}
 }
 
 // NewRTUPacketReader2 create a Reader that attempt to read full packets.
-// Set TwoWire to true in SerialContextV3.Option for 2 wire and false for 4 wire.
-func NewRTUPacketReader2(r SerialContext, isClient bool, slaveID byte) PacketReader {
-	twoWire := false
-	if v3, ok := r.(OptionContext); ok {
-		twoWire = v3.GetOption().TwoWire
-	}
-	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, twoWire: twoWire}
+// Set TwoWire to true in r.Option for 2 wire and false for 4 wire.
+func NewRTUPacketReader2(r SerialContextV3, isClient bool, slaveID byte) PacketReader {
+	return &rtuPacketReader{r: r, isClient: isClient, slaveID: slaveID, twoWire: r.GetOption().TwoWire}
 }
 
 // NewRTUBidirectionalPacketReader create a Reader that attempt to read full packets
@@ -50,6 +49,7 @@ func NewRTUBidirectionalPacketReader(r SerialContext) PacketReader {
 	return &rtuPacketReader{r: r, bidirectional: true}
 }
 
+// PacketReaderFace satisfies PacketReader
 func (s *rtuPacketReader) PacketReaderFace() {}
 
 func (s *rtuPacketReader) Read(p []byte) (int, error) {
