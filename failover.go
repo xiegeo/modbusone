@@ -52,6 +52,9 @@ type FailoverSerialConn struct {
 	misses    int32
 }
 
+// FailoverSerialConn should implement SerialContextV3
+var _ SerialContextV3 = &FailoverSerialConn{}
+
 // NewFailoverConn adds failover function to a SerialContext.
 func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSerialConn {
 	c := &FailoverSerialConn{
@@ -75,6 +78,17 @@ func NewFailoverConn(sc SerialContext, isFailover, isClient bool) *FailoverSeria
 // BytesDelay implements BytesDelay for SerialContext.
 func (s *FailoverSerialConn) BytesDelay(n int) time.Duration {
 	return s.SerialContext.BytesDelay(n)
+}
+
+func (s *FailoverSerialConn) PacketCutoffDuration(n int) time.Duration {
+	return s.BytesDelay(n) + DefaultCPUHiccup
+}
+
+func (s *FailoverSerialConn) GetOption() Option {
+	if o, ok := s.SerialContext.(OptionContext); ok {
+		return o.GetOption()
+	}
+	return Option{}
 }
 
 func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
@@ -180,9 +194,9 @@ func (s *FailoverSerialConn) serverRead(b []byte) (int, error) {
 	}
 }
 
-// IsActive returns if the connetion is in the active state.
-// This state can change asynchronous so it is not useful for logic
-// other than status gethering or testing in a controlled envernment.
+// IsActive returns if the connection is in the active state.
+// This state can change asynchronously so it is not useful for logic
+// other than status gathering or testing in a controlled environment.
 func (s *FailoverSerialConn) IsActive() bool {
 	s.lock.Lock()
 	a := s.isActive
@@ -191,6 +205,8 @@ func (s *FailoverSerialConn) IsActive() bool {
 }
 
 func (s *FailoverSerialConn) describe() string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	b := strings.Builder{}
 	b.WriteString("FailoverSerialConn")
 	if s.isClient {
@@ -262,9 +278,9 @@ func (s *FailoverSerialConn) Read(b []byte) (int, error) {
 }
 
 func (s *FailoverSerialConn) Write(b []byte) (int, error) {
+	debugf("start write %v\n", s.describe())
 	s.lock.Lock()
 	locked := true
-	debugf("start write %v\n", s.describe())
 	defer func() {
 		if locked {
 			s.lock.Unlock()
