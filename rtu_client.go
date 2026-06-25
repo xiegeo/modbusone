@@ -269,7 +269,7 @@ func (c *RTUClient) DoTransaction(req PDU) error {
 // DoRTUTransaction starts a blocking transaction by wrapping StartTransactionToServer.
 //
 // RTU is currently required to be valid, but is not sent as is for write to servers,
-// where data is to be filled in by the client handler.
+// It uses the header's slave ID and PDU to initiate the transaction.
 func DoRTUTransaction(c Client, header RTUHeader) error {
 	errChan := make(chan error)
 	c.StartTransactionToServer(header.SlaveID, header.PDU, errChan)
