@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -127,13 +128,18 @@ func (m MultiIDHandler) OnError(req RTUHeader, errRep RTUHeader) {
 // Serve serves RTUClient handlers.
 func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 	defer c.Close()
+
+	portLock := sync.Mutex{}
+
 	go func() {
-		// Reader loop that always ready to received data. This make sure that read
+		// Reader loop that is always ready to received data. This make sure that read
 		// data is always new(ish), to dump data out that is received during an
 		// unexpected time.
 		for {
 			rb := make([]byte, MaxRTUSize)
+			portLock.Lock()
 			n, err := c.packetReader.Read(rb)
+			portLock.Unlock()
 			if err != nil {
 				debugf("RTUClient read err:%v\n", err)
 				c.actions <- rtuAction{t: clientError, err: err}
@@ -167,8 +173,12 @@ func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 			}
 			act.data = MakeRTU(act.data[0], ap.MakeWriteRequest(data))
 		}
+
+		portLock.Lock()
 		time.Sleep(c.com.MinDelay())
 		_, err := c.com.Write(act.data)
+		portLock.Unlock()
+
 		if err != nil {
 			act.errChan <- err
 			return err
