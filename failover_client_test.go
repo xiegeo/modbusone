@@ -24,9 +24,9 @@ func connectMockClients(t *testing.T, slaveID byte) (*FailoverRTUClient, *Failov
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	ca := NewFailoverConn(newMockSerial("ca", ra, wfa, ra), false, true) // client a connection
-	cb := NewFailoverConn(newMockSerial("cb", rb, wfb, rb), true, true)  // client b connection
-	sc := newMockSerial("sc", rc, wfc, rc)                               // server connection
+	ca := NewFailoverConn(newMockSerial(t, "ca", ra, wfa, ra), false, true) // client a connection
+	cb := NewFailoverConn(newMockSerial(t, "cb", rb, wfb, rb), true, true)  // client b connection
+	sc := newMockSerial(t, "sc", rc, wfc, rc)                               // server connection
 
 	clientA := NewFailoverRTUClient(ca, false, slaveID)
 	clientB := NewFailoverRTUClient(cb, true, slaveID)
@@ -87,12 +87,12 @@ func TestFailoverClient(t *testing.T) {
 
 	_ = os.Stdout
 	_ = coloredgoroutine.Colors
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	testFailoverClientCount++
+	//	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	//	testFailoverClientCount++
 	// fmt.Fprintf(os.Stdout, "=== TestFailoverClient (%v) logging started goroutines (%v) ===\n", testFailoverClientCount, runtime.NumGoroutine())
-	defer func() {
-		SetDebugOut(nil)
-	}()
+	//defer func() {
+	//	SetDebugOut(nil)
+	//}()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcWriteSingleRegister, 0, 1, 1, nil)

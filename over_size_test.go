@@ -12,12 +12,12 @@ import (
 
 var _ = os.Stdout
 
-func connectToMockServer(slaveID byte) io.ReadWriteCloser {
+func connectToMockServer(t *testing.T, slaveID byte) io.ReadWriteCloser {
 	r1, w1 := io.Pipe() // pipe from client to server
 	r2, w2 := io.Pipe() // pipe from server to client
 
-	cc := newMockSerial("c", r2, w1, w1, w2) // client connection
-	sc := newMockSerial("s", r1, w2, w2)     // server connection
+	cc := newMockSerial(t, "c", r2, w1, w1, w2) // client connection
+	sc := newMockSerial(t, "s", r1, w2, w2)     // server connection
 
 	server := NewRTUServer(sc, slaveID)
 
@@ -34,9 +34,10 @@ func connectToMockServer(slaveID byte) io.ReadWriteCloser {
 }
 
 func TestOverSize(t *testing.T) {
-	// DebugOut = os.Stdout
+	mockSerialRandomRead = false
+	defer func() { mockSerialRandomRead = mockSerialRandomReadDefault }()
 	slaveID := byte(0x11)
-	cct := connectToMockServer(slaveID)
+	cct := connectToMockServer(t, slaveID)
 	defer cct.Close()
 	pdu := PDU(
 		append([]byte{
@@ -62,14 +63,19 @@ func TestOverSize(t *testing.T) {
 	case <-timeout.C:
 	}
 
+	OverSizeLock.Lock()
 	OverSizeSupport = true
 	OverSizeMaxRTU = 512
+	OverSizeLock.Unlock()
 	defer func() {
+		OverSizeLock.Lock()
 		OverSizeSupport = false
+		OverSizeMaxRTU = MaxRTUSize
+		OverSizeLock.Unlock()
 	}()
 
 	// New server with OverSizeSupport
-	cc := connectToMockServer(slaveID)
+	cc := connectToMockServer(t, slaveID)
 	defer cc.Close()
 	cc.Write([]byte(rtu))
 	go func() {

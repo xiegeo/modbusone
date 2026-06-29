@@ -30,6 +30,10 @@ var (
 	verbose = flag.Bool("v", false, "prints debugging information")
 )
 
+// main configures the Modbus RTU serial connection and runs the program as a
+// client or server over the selected slave ID. It serves requests using a
+// memory space, and optionally pre-fills that memory with none-zero data, or
+// prints serial statistics on shutdown or interrupt.
 func main() {
 	flag.Parse()
 	if *verbose {
@@ -86,12 +90,12 @@ func main() {
 	h := modbusone.SimpleHandler{
 		ReadDiscreteInputs: func(address, quantity uint16) ([]bool, error) {
 			fmt.Printf("ReadDiscreteInputs from %v, quantity %v\n", address, quantity)
-			return discretes[address : address+quantity], nil
+			return discreteInputs[address : address+quantity], nil
 		},
 		WriteDiscreteInputs: func(address uint16, values []bool) error {
 			fmt.Printf("WriteDiscreteInputs from %v, quantity %v\n", address, len(values))
 			for i, v := range values {
-				discretes[address+uint16(i)] = v
+				discreteInputs[address+uint16(i)] = v
 			}
 			return nil
 		},
@@ -143,18 +147,35 @@ func main() {
 	}
 }
 
-const size = 0x10000
+const size = 0x10000 // 65536 addresses (0x0000 - 0xFFFF)
 
+// Total memory footprint (approx):
+// 64 KB + 64 KB + 128 KB + 128 KB ≈ 384 KB
 var (
-	discretes        [size]bool
-	coils            [size]bool
-	inputRegisters   [size]uint16
+	// Discrete Inputs (read-only boolean bits)
+	// Memory: 65536 * 1 byte ≈ 64 KB
+	discreteInputs [size]bool
+
+	// Coils (read/write boolean bits)
+	// Memory: 65536 * 1 byte ≈ 64 KB
+	coils [size]bool
+
+	// Input Registers (read-only 16-bit values)
+	// Memory: 65536 * 2 bytes ≈ 128 KB
+	inputRegisters [size]uint16
+
+	// Holding Registers (read/write 16-bit values)
+	// Memory: 65536 * 2 bytes ≈ 128 KB
 	holdingRegisters [size]uint16
 )
 
+// fillAm3 initializes the in-memory Modbus data with deterministic sample values.
+// It sets discrete inputs to true every third address, and coils to true inversely,
+// input registers to three times the address, and holding registers to 0xFFFF minus
+// the address.
 func fillAm3() {
-	for i := range discretes {
-		discretes[i] = i%3 == 0
+	for i := range discreteInputs {
+		discreteInputs[i] = i%3 == 0
 	}
 	for i := range coils {
 		coils[i] = i%3 != 0

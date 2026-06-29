@@ -1,4 +1,5 @@
 # ModbusOne [![Go Reference](https://pkg.go.dev/badge/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation.svg)](https://pkg.go.dev/github.com/xiegeo/modbusone?utm_source=godoc#section-documentation) [![codecov](https://codecov.io/github/xiegeo/modbusone/graph/badge.svg?token=P14LsyFBNh)](https://codecov.io/github/xiegeo/modbusone)
+
 A Modbus library for Go, with unified client and server APIs.
 One implementation to rule them all.
 <details>
@@ -220,6 +221,7 @@ Instead, a callback based API (like http server handler) is used for both server
 ## Implemented
 
 - Serial RTU
+  - Supports 1 client with n servers on the same serial port.
 - Modbus over TCP
 - Function Codes 1-6,15,16
 - Server and Client API
@@ -240,6 +242,10 @@ Development tools:
 - Use `go test -race -count=5 ./...` pre release.
 
 ## Breaking Changes
+
+2026-06 v1.1.0
+
+Option and Stats structs enforces keyed literals (upgrades go vet warning to compiling error)
 
 2022-09-09 v1.0.0
 

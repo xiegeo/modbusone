@@ -42,7 +42,18 @@ func (c *counter) String() string {
 	return fmt.Sprintf("reads:%v writes:%v drops:%v", atomic.LoadInt64(&c.reads), atomic.LoadInt64(&c.writes), c.TotalDrops())
 }
 
+type testHandler struct {
+	*SimpleHandler
+	holdingRegisters []uint16
+	counter          *counter
+}
+
 func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *counter) {
+	h := newTestHandler2(name, t)
+	return h.holdingRegisters, h.SimpleHandler, h.counter
+}
+
+func newTestHandler2(name string, t *testing.T) *testHandler {
 	var holdingRegisters [100]uint16
 	count := counter{}
 	shA := &SimpleHandler{
@@ -60,7 +71,11 @@ func newTestHandler(name string, t *testing.T) ([]uint16, *SimpleHandler, *count
 			return nil
 		},
 	}
-	return holdingRegisters[:], shA, &count
+	return &testHandler{
+		SimpleHandler:    shA,
+		holdingRegisters: holdingRegisters[:],
+		counter:          &count,
+	}
 }
 
 func setDelays(f *FailoverSerialConn) {
@@ -79,9 +94,9 @@ func connectToMockServers(t *testing.T, slaveID byte) (*RTUClient, *FailoverSeri
 	wfb := io.MultiWriter(wa, wc)
 	wfc := io.MultiWriter(wa, wb)
 
-	sa := NewFailoverConn(newMockSerial("sa", ra, wfa, ra), false, false) // server a connection
-	sb := NewFailoverConn(newMockSerial("sb", rb, wfb, rb), true, false)  // server b connection
-	cc := newMockSerial("cc", rc, wfc, rc)                                // client connection
+	sa := NewFailoverConn(newMockSerial(t, "sa", ra, wfa, ra), false, false) // server a connection
+	sb := NewFailoverConn(newMockSerial(t, "sb", rb, wfb, rb), true, false)  // server b connection
+	cc := newMockSerial(t, "cc", rc, wfc, rc)                                // client connection
 
 	serverA := NewRTUServer(sa, slaveID)
 	serverB := NewRTUServer(sb, slaveID)
@@ -137,8 +152,8 @@ func TestFailoverServer(t *testing.T) {
 
 	_ = os.Stdout
 	_ = coloredgoroutine.Colors
-	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
-	defer func() { SetDebugOut(nil) }()
+	//	SetDebugOut(coloredgoroutine.Colors(os.Stdout))
+	//	defer func() { SetDebugOut(nil) }()
 
 	t.Run("cold start", func(t *testing.T) {
 		reqs, err := MakePDURequestHeadersSized(FcReadHoldingRegisters, 0, 1, 1, nil)

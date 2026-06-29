@@ -80,12 +80,7 @@ func (c *TCPClient) DoTransaction(req PDU) error {
 func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 	c.locker.Lock() // only handle one transaction at a time for now
 	defer c.locker.Unlock()
-	var bs []byte
-	if OverSizeSupport {
-		bs = make([]byte, OverSizeMaxRTU+TCPHeaderLength)
-	} else {
-		bs = make([]byte, MaxRTUSize+TCPHeaderLength)
-	}
+	bs := make([]byte, GetMaxRTUSize()+TCPHeaderLength)
 	if req.GetFunctionCode().IsWriteToServer() {
 		data, err := c.getHandler().OnRead(req)
 		if err != nil {

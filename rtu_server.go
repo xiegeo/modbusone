@@ -23,7 +23,11 @@ type RTUServer struct {
 func NewRTUServer(com SerialContext, slaveID byte) *RTUServer {
 	pr, ok := com.(PacketReader)
 	if !ok {
-		pr = NewRTUPacketReader(com, false)
+		if v3, ok := com.(SerialContextV3); ok {
+			pr = NewRTUPacketReader2(v3, false, slaveID)
+		} else {
+			pr = NewRTUPacketReader(com, false)
+		}
 	}
 	r := RTUServer{
 		com:          com,
@@ -41,7 +45,7 @@ func (s *RTUServer) Serve(handler ProtocolHandler) error {
 	delay := s.com.MinDelay()
 
 	var rb []byte
-	if OverSizeSupport {
+	if IsOverSizeSupported() {
 		rb = make([]byte, OverSizeMaxRTU)
 	} else {
 		rb = make([]byte, MaxRTUSize)

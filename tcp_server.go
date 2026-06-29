@@ -71,7 +71,7 @@ func (s *TCPServer) Serve(handler ProtocolHandler) error {
 			defer conn.Close()
 
 			var rb []byte
-			if OverSizeSupport {
+			if IsOverSizeSupported() {
 				rb = make([]byte, MBAPHeaderLength+OverSizeMaxRTU+TCPHeaderLength)
 			} else {
 				rb = make([]byte, MBAPHeaderLength+MaxPDUSize)

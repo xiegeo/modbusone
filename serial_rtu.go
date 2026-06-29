@@ -2,6 +2,7 @@ package modbusone
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/xiegeo/modbusone/crc"
 )
@@ -18,15 +19,41 @@ const MaxPDUSize = 253
 // Also change OverSizeMaxRTU properly.
 var OverSizeSupport = false
 
+func IsOverSizeSupported() bool {
+	OverSizeLock.RLock()
+	o := OverSizeSupport
+	OverSizeLock.RUnlock()
+	return o
+}
+
 // OverSizeMaxRTU overrides MaxRTUSize when OverSizeSupport is true.
 // It should not be smaller than MaxRTUSize.
 var OverSizeMaxRTU = MaxRTUSize
 
+// OverSizeLock is used to fix data race issues related to changing globe over sized options
+var OverSizeLock = sync.RWMutex{}
+
+func GetMaxRTUSize() int {
+	return GetMaxPDUSize() + 3 // 1 byte slave id + 2 bytes of crc
+}
+
 func GetMaxPDUSize() int {
-	if OverSizeSupport{
-		return max(MaxPDUSize, OverSizeMaxRTU - 3)
+	OverSizeLock.RLock()
+	defer OverSizeLock.RUnlock()
+	return getMaxPDUSize()
+}
+
+func getMaxPDUSize() int {
+	if OverSizeSupport {
+		return max(MaxPDUSize, OverSizeMaxRTU-3)
 	}
 	return MaxPDUSize
+}
+
+// A prefix of the RTU
+type RTUHeader struct {
+	SlaveID byte
+	PDU
 }
 
 const smallestRTUSize = 4
@@ -39,7 +66,22 @@ func MakeRTU(slaveID byte, p PDU) RTU {
 	return RTU(crc.Sum(append([]byte{slaveID}, p...)))
 }
 
-// IsMulticast returns true if slaveID is the multicast address 0.
+func (r RTU) fastGetHeader() RTUHeader {
+	return RTUHeader{
+		SlaveID: r.GetSlaveID(),
+		PDU:     r.fastGetPDU(),
+	}
+}
+
+// GetSlaveID returns the SlaveID inside, or 255 if the RTU is empty.
+func (r RTU) GetSlaveID() byte {
+	if len(r) == 0 {
+		return 255 // invalid SlaveID
+	}
+	return r[0]
+}
+
+// IsMulticast returns true if SlaveID is the multicast address 0.
 func (r RTU) IsMulticast() bool {
 	return len(r) > 0 && r[0] == 0
 }
