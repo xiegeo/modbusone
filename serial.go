@@ -61,7 +61,7 @@ type Option struct {
 	SleepBufferBytes   int  // some reader return on first bytes read, use this to save some CPU
 }
 
-// Stats records statics on a SerialContext, must be aligned to 64 bits on 32 bit systems.
+// Stats records statistics on a SerialContext(V3), must be aligned to 64 bits on 32 bit systems.
 type Stats struct {
 	_ struct{} // enforces keyed literals
 
@@ -73,6 +73,20 @@ type Stats struct {
 	FormateWarnings  int64
 	IDDrops          int64
 	OtherDrops       int64
+}
+
+// Clone makes a copy of Stats without race conditions
+func (s *Stats) Clone() *Stats {
+	return &Stats{
+		ReadPackets:      atomic.LoadInt64(&s.ReadPackets),
+		CrcErrors:        atomic.LoadInt64(&s.CrcErrors),
+		RemoteErrors:     atomic.LoadInt64(&s.RemoteErrors),
+		OtherErrors:      atomic.LoadInt64(&s.OtherErrors),
+		LongReadWarnings: atomic.LoadInt64(&s.LongReadWarnings),
+		FormateWarnings:  atomic.LoadInt64(&s.FormateWarnings),
+		IDDrops:          atomic.LoadInt64(&s.IDDrops),
+		OtherDrops:       atomic.LoadInt64(&s.OtherDrops),
+	}
 }
 
 // Reset the stats to zero.
@@ -94,6 +108,7 @@ func (s *Stats) TotalDrops() int64 {
 		atomic.LoadInt64(&s.IDDrops) + atomic.LoadInt64(&s.OtherDrops)
 }
 
+// String omits ReadPackets intentionally.
 func (s *Stats) String() string {
 	return fmt.Sprint(atomic.LoadInt64(&s.CrcErrors), atomic.LoadInt64(&s.RemoteErrors), atomic.LoadInt64(&s.OtherErrors),
 		atomic.LoadInt64(&s.LongReadWarnings), atomic.LoadInt64(&s.FormateWarnings),
