@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"math/rand/v2"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -28,7 +28,7 @@ type mockSerial struct {
 	Option
 }
 
-var seeder = rand.NewPCG(0, 0)
+var seeder = rand.NewSource(0)
 
 const mockSerialRandomReadDefault = true
 
@@ -36,7 +36,7 @@ var mockSerialRandomRead = mockSerialRandomReadDefault
 
 func newMockSerial(t *testing.T, name string, r io.Reader, w io.Writer, c ...io.Closer) *mockSerial {
 	br := bufio.NewReaderSize(r, 256)
-	random := rand.New(rand.NewPCG(seeder.Uint64(), seeder.Uint64()))
+	random := rand.New(rand.NewSource(seeder.Int63()))
 	if !mockSerialRandomRead {
 		random = nil
 	}
@@ -51,8 +51,8 @@ func (s *mockSerial) Write(data []byte) (int, error) {
 }
 
 func (s *mockSerial) Read(p []byte) (int, error) {
-	if s.random != nil && s.random.IntN(2) == 0 {
-		p = p[:s.random.IntN(min(len(p), 16))] // test part reads
+	if s.random != nil && s.random.Int31n(2) == 0 {
+		p = p[:s.random.Int31n(int32(min(len(p), 16)))] // test part reads
 	}
 	s.readLock.Lock()
 	n, err := s.Reader.Read(p)
