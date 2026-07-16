@@ -1,6 +1,4 @@
-//go:build !go1.21
-
-package modbusone
+package modbusone_test
 
 // ordered defines the type constraint for types that support <, <=, >, and >=.
 type ordered interface {

@@ -10,14 +10,23 @@ jobs:
   test:
     name: Run tests and collect coverage
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - '1.26'
+          - '1.20'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
 
       - name: Install dependencies
         run: go mod download
@@ -26,6 +35,9 @@ jobs:
         run: go test -count=5 -race -coverprofile=coverage.txt ./...
 
       - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: GO
+        env:
+          GO: ${{ matrix.go }}
