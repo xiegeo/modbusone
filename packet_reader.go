@@ -72,42 +72,46 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 					n = 0
 				}
 				now := time.Now()
-				if read != 0 {
+				if read > 0 { // check if existing read is too old
 					cutoffDuration := GetPacketCutoffDurationFromSerialContext(s.r, n)
 					readDuration := now.Sub(s.lastReadAt)
 					if readDuration > cutoffDuration {
-						debugf("RTUPacketReader read took:%v > %v, reset packet", readDuration, cutoffDuration)
+						debugf("RTUPacketReader read %v bytes, took:%v > %v, reset packet", n, readDuration, cutoffDuration)
 						s.last = append(s.last[:0], p[read:read+n]...)
+						read = 0
+						expected = smallestRTUSize
 						s.lastReadAt = now
 						atomic.AddInt64(&s.r.Stats().OtherDrops, 1)
-						return read, err
+						continue
 					}
 				}
-				s.lastReadAt = now
-				debugf("RTUPacketReader read (%v+%v)/%v err:%v, expected %v", read, n, len(p), err, expected)
+				if n > 0 {
+					s.lastReadAt = now
+				}
+				if n > 0 || err != nil {
+					debugf("RTUPacketReader read (%v+%v)/%v err:%v, expected %v", read, n, len(p), err, expected)
+				}
 				read += n
 				if err != nil || read == len(p) {
 					return read, err
 				}
 			}
-			if read < expected {
-				// lets read more
+			if read < expected { // lets read more
+				// some devices returns immediately on first byte received, so we let it buffer before calling read again.
+				waitForBytes := min(s.option.SleepBufferBytes, expected-read)
+				time.Sleep(s.r.BytesDelay(waitForBytes))
 				continue
 			}
 			// lets see if there is more to read
 			if s.bidirectional {
 				expected = GetRTUBidirectionalSizeFromHeader(p[:read])
-				debugf("GetRTUBidirectionalSizeFromHeader new expected size %v %x", expected, p[:read])
+				debugf("GetRTUBidirectionalSizeFromHeader new expected size:%v data:%x", expected, p[:read])
 			} else if s.option.TwoWire {
 				expected = GetRTUSizeFromHeader2(p[:read], s.isClient, s.slaveID, s.lastRTU)
-				debugf("GetRTUSizeFromHeader2 new expected size %v %v %x", expected, s.isClient, p[:read])
+				debugf("GetRTUSizeFromHeader2 new expected size:%v isClient:%v data:%x", expected, s.isClient, p[:read])
 			} else {
 				expected = GetRTUSizeFromHeader(p[:read], s.isClient)
-				debugf("GetRTUSizeFromHeader new expected size %v isClient:%v %x", expected, s.isClient, p[:read])
-			}
-			if expected > read-1 { // some devices returns immediately on first byte received, so we let it buffer before calling read again.
-				waitForBytes := min(s.option.SleepBufferBytes, expected-read)
-				time.Sleep(s.r.BytesDelay(waitForBytes))
+				debugf("GetRTUSizeFromHeader new expected size:%v isClient:%v data:%x", expected, s.isClient, p[:read])
 			}
 		}
 		if read > expected {
