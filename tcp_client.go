@@ -13,7 +13,7 @@ import (
 // be used by a ProtocolHandler.
 type TCPClient struct {
 	ctx           context.Context //nolint:containedctx // ctx is internally created.
-	cancle        context.CancelFunc
+	cancel        context.CancelFunc
 	conn          io.ReadWriteCloser
 	SlaveID       byte
 	_handler      ProtocolHandler // very private, always use getHandler
@@ -31,7 +31,7 @@ func NewTCPClient(conn io.ReadWriteCloser, slaveID byte) *TCPClient {
 	ctx, cancle := context.WithCancel(context.Background())
 	c := &TCPClient{
 		ctx:     ctx,
-		cancle:  cancle,
+		cancel:  cancle,
 		conn:    conn,
 		SlaveID: slaveID,
 	}
@@ -61,7 +61,7 @@ func (c *TCPClient) Close() error {
 	if c.exitError == nil {
 		c.exitError = errors.New("closed by user action")
 	}
-	c.cancle()
+	c.cancel()
 	return c.conn.Close()
 }
 
@@ -91,13 +91,13 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 	_, err := writeTCP(c.conn, bs, req)
 	if err != nil {
 		c.exitError = err
-		c.cancle()
+		c.cancel()
 		return err
 	}
 	n, err := readTCP(c.conn, bs)
 	if err != nil {
 		c.exitError = err
-		c.cancle()
+		c.cancel()
 		return err
 	}
 	rp := PDU(bs[MBAPHeaderLength:n])
@@ -109,7 +109,7 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 	if !IsRequestReply(req, rp) {
 		err = errors.New("unexpected packet received")
 		c.exitError = err
-		c.cancle()
+		c.cancel()
 		return err
 	}
 	if fc.IsReadToServer() {
@@ -117,7 +117,7 @@ func (c *TCPClient) DoTransaction2(slaveID byte, req PDU) error {
 		bs, err := rp.GetReplyValues()
 		if err != nil {
 			c.exitError = err
-			c.cancle()
+			c.cancel()
 			return err
 		}
 		return c.getHandler().OnWrite(req, bs)
