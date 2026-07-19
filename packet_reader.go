@@ -80,7 +80,7 @@ func (s *rtuPacketReader) Read(p []byte) (int, error) {
 						s.last = append(s.last[:0], p[read:read+n]...)
 						read = 0
 						expected = smallestRTUSize
-						s.lastReadAt = now
+						s.lastReadAt = time.Now() // update now in case of debugger pause
 						atomic.AddInt64(&s.r.Stats().OtherDrops, 1)
 						continue
 					}
