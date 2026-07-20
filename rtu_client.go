@@ -221,7 +221,8 @@ func (c *RTUClient) ServeRTU(handler RTUProtocolHandler) error {
 				if hasErr && fc == afc {
 					atomic.AddInt64(&c.com.Stats().OtherErrors, 1)
 					handler.OnError(act.data.fastGetHeader(), react.data.fastGetHeader())
-					act.errChan <- fmt.Errorf("server reply with exception:%v", hex.EncodeToString(rp))
+					ec := ExceptionCode(rp[1])
+					act.errChan <- fmt.Errorf("server reply with exception:%v %w", hex.EncodeToString(rp), ec)
 					break READ_LOOP
 				}
 				if !IsRequestReply(act.data.fastGetPDU(), rp) {

@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Fill fuzz cases
+        run: go test -fuzz FuzzHandler -fuzztime=60s
+
       - name: Run tests
         run: go test -count=5 -race -coverprofile=coverage.txt ./...
 

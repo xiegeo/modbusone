@@ -160,6 +160,9 @@ func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 // client side StartTransaction.
 // The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount().
 func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error) {
+	if quantity == 0 {
+		return nil, fmt.Errorf("quantity is required for MakeRequestHeader")
+	}
 	if quantity > f.MaxPerPacket() {
 		return nil, fmt.Errorf("%v can not pack %v at once", f, quantity)
 	}

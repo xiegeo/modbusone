@@ -3,6 +3,7 @@ package modbusone_test
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"math/rand"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	. "github.com/xiegeo/modbusone"
 )
 
@@ -342,4 +344,90 @@ func TestHandler(t *testing.T) {
 		}
 		testTrans(header, request, response)
 	})
+}
+
+func FuzzHandler(f *testing.F) {
+	//SetDebugOut(os.Stdout)
+	//defer func() { SetDebugOut(nil) }()
+
+	f.Fuzz(func(t *testing.T,
+		slaveID byte,
+		fc_ byte, // FunctionCode
+		address uint16,
+		quantity uint16,
+		actual_values uint16,
+		errorCode_ byte, // error of type ExceptionCode
+	) {
+		if slaveID == 0 {
+			return // not supported
+		}
+		fc := FunctionCode(fc_)
+		var errorCode error = ExceptionCode(errorCode_)
+		if errorCode == EcOK {
+			errorCode = nil
+		}
+		pdu, err := fc.MakeRequestHeader(address, quantity)
+		if err != nil {
+			return
+		}
+
+		r1, w1 := io.Pipe() // pipe from client to server
+		r2, w2 := io.Pipe() // pipe from server to client
+
+		mockSerialRandomRead = false
+		cc := newMockSerial(t, "c", r2, w1, w1) // client connection
+		sc := newMockSerial(t, "s", r1, w2, w2) // server connection
+
+		client := NewRTUClient(cc, slaveID)
+		client.SetServerProcessingTime(500 * time.Millisecond)
+		defer client.Close()
+		server := NewRTUServer(sc, slaveID)
+		defer server.Close()
+
+		h := &SimpleHandler{
+			ReadDiscreteInputs:    func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
+			WriteDiscreteInputs:   func(address uint16, values []bool) error { return errorCode },
+			ReadCoils:             func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
+			WriteCoils:            func(address uint16, values []bool) error { return errorCode },
+			ReadInputRegisters:    func(address, quantity uint16) ([]uint16, error) { return make([]uint16, actual_values), errorCode },
+			WriteInputRegisters:   func(address uint16, values []uint16) error { return errorCode },
+			ReadHoldingRegisters:  func(address, quantity uint16) ([]uint16, error) { return make([]uint16, actual_values), errorCode },
+			WriteHoldingRegisters: func(address uint16, values []uint16) error { return errorCode },
+		}
+		go client.Serve(h)
+		go server.Serve(h)
+
+		err = client.DoTransaction(pdu)
+		if err != nil {
+			ec := ToExceptionCode(err)
+			if ec == ExceptionCode(errorCode_) {
+				return
+			}
+			if actual_values < quantity {
+				if ec == EcIllegalDataAddress {
+					return
+				}
+			}
+			t.Log(ec, err, errorCode)
+		}
+		assert.NoError(t, err)
+
+		client.Close()
+		server.Close()
+	})
+}
+
+func StringToBools(s string) ([]bool, error) {
+	bools := make([]bool, len(s))
+	for i, c := range s {
+		switch c {
+		case '0':
+			bools[i] = false
+		case '1':
+			bools[i] = true
+		default:
+			return nil, fmt.Errorf("invalid character %q at index %d", c, i)
+		}
+	}
+	return bools, nil
 }

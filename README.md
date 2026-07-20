@@ -243,6 +243,15 @@ Development tools:
 
 ## Breaking Changes
 
+2026-07 v1.2.0
+
+Protect API from some inappropriate usage. Previously, badly formed data could be sent
+over the wire (such as wrong size of data reply), such usage will now be fixed by cutting
+extra data or return errors.
+
+When calling `func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error)`
+with a single value function code, quantity is required to be 1. 
+
 2026-06 v1.1.0
 
 Option and Stats structs enforces keyed literals (upgrades go vet warning to compiling error)
