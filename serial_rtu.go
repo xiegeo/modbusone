@@ -56,7 +56,7 @@ type RTUHeader struct {
 	PDU
 }
 
-const smallestRTUSize = 4
+const smallestRTUSize = 5 // 1 byte slave, 2 byte pdu, 2 byte crc
 
 // RTU is the Modbus RTU Application Data Unit.
 type RTU []byte
@@ -91,7 +91,7 @@ var ErrorCrc = fmt.Errorf("RTU data crc not valid")
 
 // GetPDU returns the PDU inside, CRC is checked.
 func (r RTU) GetPDU() (PDU, error) {
-	if len(r) < 4 {
+	if len(r) < smallestRTUSize {
 		return nil, fmt.Errorf("RTU data too short to produce PDU")
 	}
 	if !crc.Validate(r) {

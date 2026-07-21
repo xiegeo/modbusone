@@ -51,6 +51,7 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 			return nil, ErrFcNotSupported
 		}
 		values, err := h.ReadDiscreteInputs(address, count)
+		values, err = checkValues(values, count, err)
 		if err != nil {
 			return nil, err
 		}
@@ -60,6 +61,7 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 			return nil, ErrFcNotSupported
 		}
 		values, err := h.ReadCoils(address, count)
+		values, err = checkValues(values, count, err)
 		if err != nil {
 			return nil, err
 		}
@@ -69,6 +71,7 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 			return nil, ErrFcNotSupported
 		}
 		values, err := h.ReadInputRegisters(address, count)
+		values, err = checkValues(values, count, err)
 		if err != nil {
 			return nil, err
 		}
@@ -78,12 +81,26 @@ func (h *SimpleHandler) OnRead(req PDU) ([]byte, error) {
 			return nil, ErrFcNotSupported
 		}
 		values, err := h.ReadHoldingRegisters(address, count)
+		values, err = checkValues(values, count, err)
 		if err != nil {
 			return nil, err
 		}
 		return RegistersToData(values)
 	}
 	return nil, ErrFcNotSupported
+}
+func checkValues[T any](values []T, count uint16, err error) ([]T, error) {
+	if err != nil {
+		return nil, err
+	}
+	if len(values) > int(count) {
+		debugf("checkValues expected %v but got %v values, cutting off extra values", count, len(values))
+		values = values[:count]
+	} else if len(values) < int(count) {
+		debugf("checkValues expected %v but got %v values, returning EcServerDeviceFailure", count, len(values))
+		return nil, EcServerDeviceFailure
+	}
+	return values, nil
 }
 
 // OnWrite is called by a Server, set Write... to catch the calls.

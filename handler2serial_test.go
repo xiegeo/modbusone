@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	. "github.com/xiegeo/modbusone"
 )
 
@@ -341,5 +343,134 @@ func TestHandler(t *testing.T) {
 			return vs, nil
 		}
 		testTrans(header, request, response)
+	})
+}
+
+func FuzzHandler(f *testing.F) {
+	//run: go test -fuzz FuzzHandler -fuzztime=60s
+
+	//SetDebugOut(os.Stdout)
+	//defer func() { SetDebugOut(nil) }()
+
+	mockSerialRandomRead = false
+	defer func() { mockSerialRandomRead = mockSerialRandomReadDefault }()
+
+	// for every function code
+	for fc := FunctionCode(0); fc < 0x80; fc++ {
+		if fc.Valid() != (fc.MaxPerPacket() > 0) {
+			f.Fatalf("%v Valid %v and MaxPerPacket %v are not consistent", fc, fc.Valid(), fc.MaxPerPacket())
+		}
+		if !fc.Valid() {
+			continue
+		}
+		// add a case where this Handler's function is undefined
+		f.Add(byte(fc), byte(fc), uint16(fc)-1, uint16(1), uint16(1), byte(EcIllegalFunction))
+		// add a case where a custom error code is returned
+		f.Add(0-byte(fc), byte(fc), 3-uint16(fc), uint16(1), uint16(1), 255-byte(fc))
+		// add a case of zero request
+		f.Add(byte(fc)+0x11, byte(fc), uint16(fc)-2, uint16(0), uint16(0), byte(0))
+		// add a case of 1 request
+		f.Add(byte(fc)+0x22, byte(fc), uint16(fc)-3, uint16(1), uint16(1), byte(0))
+		if fc.MaxPerPacket() < 2 {
+			continue
+		}
+		// add a case of max request
+		f.Add(byte(fc)+0x33, byte(fc), uint16(fc), fc.MaxPerPacket(), fc.MaxPerPacket(), byte(0))
+		// add a case of max + 1 request
+		f.Add(byte(fc)+0x44, byte(fc), uint16(fc), fc.MaxPerPacket()+1, fc.MaxPerPacket()+1, byte(0))
+		// add a case of data too short
+		f.Add(byte(fc)+0x55, byte(fc), uint16(fc), uint16(fc)+2, uint16(fc)+1, byte(0))
+		// add a case of data too long
+		f.Add(byte(fc)+0x66, byte(fc), uint16(fc), uint16(fc)+1, uint16(fc)+2, byte(0))
+		// add a case of address + quantity out of range
+		f.Add(byte(fc)+0x77, byte(fc), math.MaxUint16-uint16(fc), uint16(2)+uint16(fc), uint16(2)+uint16(fc), byte(0))
+	}
+
+	f.Fuzz(func(t *testing.T,
+		slaveID byte,
+		fc_ byte, // FunctionCode
+		address uint16,
+		quantity uint16,
+		actual_values uint16,
+		errorCode_ byte, // error of type ExceptionCode
+	) {
+		if slaveID == 0 {
+			return // not supported
+		}
+		fc := FunctionCode(fc_)
+		pdu, err := fc.MakeRequestHeader(address, quantity)
+		if err != nil { // force production of bad requests to exercise more error checking code paths
+			errorCode_ = byte(ToExceptionCode(err))
+			t.Logf("make bad request: %v, %v, %v, %v", fc, address, quantity, err)
+			header := []byte{byte(fc), byte(address >> 8), byte(address)}
+			if fc.IsSingle() {
+				pdu = PDU(header)
+			} else {
+				header = append(header, byte(quantity>>8), byte(quantity))
+				switch fc {
+				case FcWriteMultipleCoils:
+					pdu = PDU(append(header, byte((quantity+7)/8)))
+				case FcWriteMultipleRegisters:
+					pdu = PDU(append(header, byte(quantity*2)))
+				default:
+					pdu = PDU(header)
+				}
+			}
+		}
+		var errorCode error = ExceptionCode(errorCode_)
+		if errorCode == EcOK {
+			errorCode = nil
+		}
+
+		r1, w1 := io.Pipe() // pipe from client to server
+		r2, w2 := io.Pipe() // pipe from server to client
+
+		cc := newMockSerial(t, "c", r2, w1, w1) // client connection
+		sc := newMockSerial(t, "s", r1, w2, w2) // server connection
+
+		client := NewRTUClient(cc, slaveID)
+		client.SetServerProcessingTime(500 * time.Millisecond)
+		defer client.Close()
+		server := NewRTUServer(sc, slaveID)
+		defer server.Close()
+
+		h := &SimpleHandler{
+			ReadDiscreteInputs:    func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
+			WriteDiscreteInputs:   func(address uint16, values []bool) error { return errorCode },
+			ReadCoils:             func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
+			WriteCoils:            func(address uint16, values []bool) error { return errorCode },
+			ReadInputRegisters:    func(address, quantity uint16) ([]uint16, error) { return make([]uint16, actual_values), errorCode },
+			WriteInputRegisters:   func(address uint16, values []uint16) error { return errorCode },
+			ReadHoldingRegisters:  func(address, quantity uint16) ([]uint16, error) { return make([]uint16, actual_values), errorCode },
+			WriteHoldingRegisters: func(address uint16, values []uint16) error { return errorCode },
+		}
+		if errorCode == EcIllegalFunction {
+			h = &SimpleHandler{}
+		}
+
+		go client.Serve(h)
+		go server.Serve(h)
+
+		err = client.DoTransaction(pdu)
+		if err != nil {
+			ec := ToExceptionCode(err)
+			if ec == ExceptionCode(errorCode_) {
+				return
+			}
+			if actual_values < quantity {
+				if ec == EcServerDeviceFailure {
+					return
+				}
+			}
+			if hasError, _ := fc.SeparateError(); hasError {
+				return // if requested function code is already error masked, any error is acceptable
+			}
+			t.Log(ec, err, errorCode)
+		}
+		assert.NoError(t, err)
+		assert.NoError(t, errorCode)
+
+		client.Close()
+		server.Close()
 	})
 }

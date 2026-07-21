@@ -158,26 +158,30 @@ func (f FunctionCode) MaxPerPacketSized(size int) uint16 {
 
 // MakeRequestHeader makes a particular PDU without any data, to be used for
 // client side StartTransaction.
-// The inverse functions are PDU.GetFunctionCode() .GetAddress() and .GetRequestCount().
+// The inverse functions are PDU.GetFunctionCode(), .GetAddress(), and .GetRequestCount().
 func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error) {
-	if quantity > f.MaxPerPacket() {
-		return nil, fmt.Errorf("%v can not pack %v at once", f, quantity)
-	}
-	if uint32(address)+uint32(quantity) > uint32(f.MaxRange()) {
-		return nil, fmt.Errorf("%v + %v out of range %v", address, quantity-1, f.MaxRange())
+	if f.MaxPerPacket() == 0 {
+		return nil, fmt.Errorf("%w function %v is not supported by MakeRequestHeader", EcIllegalFunction, f)
+	} else if quantity == 0 {
+		return nil, fmt.Errorf("%w quantity is required for MakeRequestHeader", EcIllegalDataAddress)
+	} else if quantity > f.MaxPerPacket() {
+		return nil, fmt.Errorf("%w %v can not pack %v at once", EcIllegalDataAddress, f, quantity)
+	} else if uint32(address)+uint32(quantity) > uint32(f.MaxRange()) {
+		return nil, fmt.Errorf("%w %v + %v out of range %v", EcIllegalDataAddress, address, quantity-1, f.MaxRange())
 	}
 	header := []byte{byte(f), byte(address >> 8), byte(address)}
 	if f.IsSingle() {
 		return PDU(header), nil
 	}
 	header = append(header, byte(quantity>>8), byte(quantity))
-	if f == FcWriteMultipleCoils {
+	switch f {
+	case FcWriteMultipleCoils:
 		return PDU(append(header, byte((quantity+7)/8))), nil
-	}
-	if f == FcWriteMultipleRegisters {
+	case FcWriteMultipleRegisters:
 		return PDU(append(header, byte(quantity*2))), nil
+	default:
+		return PDU(header), nil
 	}
-	return PDU(header), nil
 }
 
 // IsUint16 returns true if the FunctionCode concerns 16bit values.
@@ -284,6 +288,7 @@ func ToExceptionCode(err error) ExceptionCode {
 	if errors.Is(err, ErrFcNotSupported) {
 		return EcIllegalFunction
 	}
+	debugf("ToExceptionCode: general error (%v) is converted to EcServerDeviceFailure", err)
 	return EcServerDeviceFailure
 }
 
