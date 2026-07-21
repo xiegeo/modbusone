@@ -250,7 +250,10 @@ sent over the wire (such as wrong size of data reply), such usage will now be fi
 by cutting extra data or returning error code 4 `EcServerDeviceFailure`.
 
 When calling `func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error)`
-with a single value function code, quantity is required to be 1.
+with a single value function code, quantity is required to be 1, which previously treated 0 as 1.
+
+Internal constant `smallestRTUSize` is changed from 4 to 5, since the smallest real PDU is 2 instead of 1.
+This should only impact direct RTU packet decoding on artificially created PDUs and debug logging messages in readers.
 
 2026-06 v1.1.0
 
