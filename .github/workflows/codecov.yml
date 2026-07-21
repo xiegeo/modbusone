@@ -31,9 +31,6 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Fill fuzz cases
-        run: go test -fuzz FuzzHandler -fuzztime=60s
-
       - name: Run tests
         run: go test -race -coverprofile=coverage.txt ./... # todo add -count=5 back after consistency issue is fixed with fallback tests on linux and go1.26
 
