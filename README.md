@@ -245,12 +245,12 @@ Development tools:
 
 2026-07 v1.2.0
 
-Protect API from some inappropriate usage. Previously, badly formed data could be sent
-over the wire (such as wrong size of data reply), such usage will now be fixed by cutting
-extra data or return errors.
+Protect API from some inappropriate usage. Previously, badly formed data could be
+sent over the wire (such as wrong size of data reply), such usage will now be fixed
+by cutting extra data or returning error code 4 `EcServerDeviceFailure`.
 
 When calling `func (f FunctionCode) MakeRequestHeader(address, quantity uint16) (PDU, error)`
-with a single value function code, quantity is required to be 1. 
+with a single value function code, quantity is required to be 1.
 
 2026-06 v1.1.0
 

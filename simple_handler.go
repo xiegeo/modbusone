@@ -97,8 +97,8 @@ func checkValues[T any](values []T, count uint16, err error) ([]T, error) {
 		debugf("checkValues expected %v but got %v values, cutting off extra values", count, len(values))
 		values = values[:count]
 	} else if len(values) < int(count) {
-		debugf("checkValues expected %v but got %v values, returning EcIllegalDataAddress", count, len(values))
-		return nil, EcIllegalDataAddress
+		debugf("checkValues expected %v but got %v values, returning EcServerDeviceFailure", count, len(values))
+		return nil, EcServerDeviceFailure
 	}
 	return values, nil
 }
