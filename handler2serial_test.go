@@ -434,7 +434,7 @@ func FuzzHandler(f *testing.F) {
 		server := NewRTUServer(sc, slaveID)
 		defer server.Close()
 
-		h := &SimpleHandler{
+		ch := &SimpleHandler{
 			ReadDiscreteInputs:    func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
 			WriteDiscreteInputs:   func(address uint16, values []bool) error { return errorCode },
 			ReadCoils:             func(address, quantity uint16) ([]bool, error) { return make([]bool, actual_values), errorCode },
@@ -444,12 +444,13 @@ func FuzzHandler(f *testing.F) {
 			ReadHoldingRegisters:  func(address, quantity uint16) ([]uint16, error) { return make([]uint16, actual_values), errorCode },
 			WriteHoldingRegisters: func(address uint16, values []uint16) error { return errorCode },
 		}
+		sh := ch
 		if errorCode == EcIllegalFunction {
-			h = &SimpleHandler{}
+			sh = &SimpleHandler{}
 		}
 
-		go client.Serve(h)
-		go server.Serve(h)
+		go client.Serve(ch)
+		go server.Serve(sh)
 
 		err = client.DoTransaction(pdu)
 		if err != nil {
