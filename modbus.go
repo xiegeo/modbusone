@@ -317,6 +317,7 @@ func (p PDU) ValidateRequest() error {
 		return EcIllegalFunction
 	}
 	if len(p) < 3 {
+		debugf("ValidateRequest expected length of 3 or more, got %v bytes", len(p))
 		return EcIllegalDataAddress
 	}
 	return nil
@@ -331,19 +332,20 @@ func (p PDU) GetFunctionCode() FunctionCode {
 }
 
 // GetAddress returns the starting address,
-// If PDU is invalid, behavior is undefined (can panic).
+// If PDU does not contain address, behavior is undefined (can panic).
 func (p PDU) GetAddress() uint16 {
 	return uint16(p[1])<<8 | uint16(p[2])
 }
 
 // GetRequestCount returns the number of values requested,
-// If PDU is invalid (too short), return 0 with error.
+// If PDU does not contain count, return 0 with error.
 func (p PDU) GetRequestCount() (uint16, error) {
 	if p.GetFunctionCode().IsSingle() {
 		return 1, nil
 	}
 	if len(p) < 5 {
-		return 0, EcIllegalDataValue
+		debugf("GetRequestCount expected length of 5 or more, got %v bytes", len(p))
+		return 0, EcIllegalDataAddress
 	}
 	return uint16(p[3])<<8 | uint16(p[4]), nil
 }

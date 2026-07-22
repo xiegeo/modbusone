@@ -13,7 +13,7 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 			return nil, EcIllegalDataValue
 		}
 		if data[1] != 0 {
-			debugf("WriteSingleCoil unexpected %v %v\n", data[0], data[1])
+			debugf("WriteSingleCoil unexpected data %v %v\n", data[0], data[1])
 			return nil, EcIllegalDataValue
 		}
 		if data[0] == 0 {
@@ -22,12 +22,12 @@ func DataToBools(data []byte, count uint16, fc FunctionCode) ([]bool, error) {
 		if data[0] == 0xff {
 			return []bool{true}, nil
 		}
-		debugf("WriteSingleCoil unexpected %v %v", data[0], data[1])
+		debugf("WriteSingleCoil unexpected data %v %v", data[0], data[1])
 		return nil, EcIllegalDataValue
 	}
 
 	byteCount := len(data)
-	if (count+7)/8 != uint16(byteCount) {
+	if (int(count)+7)/8 != byteCount {
 		debugf("unexpected size: bools %v, bytes %v", count, byteCount)
 		return nil, EcIllegalDataValue
 	}
